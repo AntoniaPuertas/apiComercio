@@ -44,6 +44,18 @@ class ProductoDB {
         return null;
     }
 
+    public function createProducto($codigo, $nombre, $precio, $descripcion, $imagen){
+        $sql = "INSERT INTO {$this->table} (codigo, nombre, precio, descripcion, imagen) VALUES (?, ?, ?, ?, ?)";
+        $stmt = $this->db->prepare($sql);
+        if($stmt){
+            $stmt->bind_param("sssss", $codigo, $nombre, $precio, $descripcion, $imagen);
+            $resultado = $stmt->execute();
+            $stmt->close();
+            return $resultado;
+        }
+        return false;
+    }
+
     public function delete($id){
         $sql = "DELETE FROM {$this->table} WHERE id = ?";
         $stmt = $this->db->prepare($sql);
