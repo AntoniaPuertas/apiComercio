@@ -56,6 +56,18 @@ class ProductoDB {
         return false;
     }
 
+    public function updateProducto($id, $codigo, $nombre, $precio, $descripcion, $imagen){
+        $sql = "UPDATE {$this->table} SET codigo = ?, nombre = ?, precio = ?, descripcion = ?, imagen = ? WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        if($stmt){
+            $stmt->bind_param("sssssi", $codigo, $nombre, $precio, $descripcion, $imagen, $id);
+            $resultado = $stmt->execute();
+            $stmt->close();
+            return $resultado;
+        }
+        return false;
+    }
+
     public function delete($id){
         $sql = "DELETE FROM {$this->table} WHERE id = ?";
         $stmt = $this->db->prepare($sql);
