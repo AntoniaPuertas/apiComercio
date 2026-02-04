@@ -1,0 +1,166 @@
+/**
+ * API Client - Cliente HTTP para la API REST
+ */
+
+const API = {
+    baseUrl: '/apiComercio/api',
+
+    /**
+     * Realiza una peticion fetch con configuracion comun
+     */
+    async request(endpoint, options = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+
+        const config = {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            ...options
+        };
+
+        try {
+            const response = await fetch(url, config);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.message || 'Error en la peticion');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * GET request
+     */
+    async get(endpoint) {
+        return this.request(endpoint, { method: 'GET' });
+    },
+
+    /**
+     * POST request
+     */
+    async post(endpoint, body) {
+        return this.request(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+    },
+
+    /**
+     * PUT request
+     */
+    async put(endpoint, body) {
+        return this.request(endpoint, {
+            method: 'PUT',
+            body: JSON.stringify(body)
+        });
+    },
+
+    /**
+     * DELETE request
+     */
+    async delete(endpoint) {
+        return this.request(endpoint, { method: 'DELETE' });
+    },
+
+    // =========================================
+    // Productos
+    // =========================================
+
+    productos: {
+        async getAll(params = {}) {
+            const query = new URLSearchParams(params).toString();
+            return API.get(`/productos${query ? '?' + query : ''}`);
+        },
+
+        async getById(id) {
+            return API.get(`/productos/${id}`);
+        },
+
+        async create(data) {
+            return API.post('/productos', data);
+        },
+
+        async update(id, data) {
+            return API.put(`/productos/${id}`, data);
+        },
+
+        async delete(id) {
+            return API.delete(`/productos/${id}`);
+        }
+    },
+
+    // =========================================
+    // Usuarios
+    // =========================================
+
+    usuarios: {
+        async getAll(params = {}) {
+            const query = new URLSearchParams(params).toString();
+            return API.get(`/usuarios${query ? '?' + query : ''}`);
+        },
+
+        async getById(id) {
+            return API.get(`/usuarios/${id}`);
+        },
+
+        async create(data) {
+            return API.post('/usuarios', data);
+        },
+
+        async update(id, data) {
+            return API.put(`/usuarios/${id}`, data);
+        },
+
+        async delete(id) {
+            return API.delete(`/usuarios/${id}`);
+        }
+    },
+
+    // =========================================
+    // Pedidos
+    // =========================================
+
+    pedidos: {
+        async getAll(params = {}) {
+            const query = new URLSearchParams(params).toString();
+            return API.get(`/pedidos${query ? '?' + query : ''}`);
+        },
+
+        async getById(id) {
+            return API.get(`/pedidos/${id}`);
+        },
+
+        async create(data) {
+            return API.post('/pedidos', data);
+        },
+
+        async update(id, data) {
+            return API.put(`/pedidos/${id}`, data);
+        },
+
+        async updateEstado(id, estado) {
+            return API.put(`/pedidos/${id}/estado`, { estado });
+        },
+
+        async delete(id) {
+            return API.delete(`/pedidos/${id}`);
+        },
+
+        async getDetalles(id) {
+            return API.get(`/pedidos/${id}/detalles`);
+        },
+
+        async addDetalle(pedidoId, data) {
+            return API.post(`/pedidos/${pedidoId}/detalles`, data);
+        },
+
+        async deleteDetalle(pedidoId, detalleId) {
+            return API.delete(`/pedidos/${pedidoId}/detalles/${detalleId}`);
+        }
+    }
+};

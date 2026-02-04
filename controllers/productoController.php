@@ -1,25 +1,27 @@
 <?php
 
-class ProductoController {
+class ProductoController
+{
     private $productoDB;
     private $requestMethod;
     private $productoId;
 
-    public function __construct($db,$requestMethod, $productoId = null)
+    public function __construct($db, $requestMethod, $productoId = null)
     {
         $this->productoDB = new ProductoDB($db);
         $this->requestMethod = $requestMethod;
         $this->productoId = $productoId;
     }
 
-    public function processRequest(){
+    public function processRequest()
+    {
         $method = $this->requestMethod;
         //comprobar el método de llamada
-        switch($method){
+        switch ($method) {
             case 'GET':
-                if($this->productoId){
+                if ($this->productoId) {
                     $respuesta = $this->getProducto($this->productoId);
-                }else{
+                } else {
                     $respuesta = $this->getAllProductos();
                 }
                 break;
@@ -27,16 +29,16 @@ class ProductoController {
                 $respuesta = $this->createProducto();
                 break;
             case 'PUT':
-                if($this->productoId){
+                if ($this->productoId) {
                     $respuesta = $this->actualizarProducto($this->productoId);
-                }else{
+                } else {
                     $respuesta = $this->respuestaNoEncontrada();
                 }
                 break;
             case 'DELETE':
-                if($this->productoId){
+                if ($this->productoId) {
                     $respuesta = $this->deleteProducto($this->productoId);
-                }else{
+                } else {
                     $respuesta = $this->respuestaNoEncontrada();
                 }
                 break;
@@ -45,14 +47,15 @@ class ProductoController {
         }
         //Se le envía al cliente la cabecera y el cuerpo
         header($respuesta['status_code_header']);
-        if($respuesta['body']){
+        if ($respuesta['body']) {
             echo $respuesta['body'];
         }
     }
 
-    private function getProducto($id){
+    private function getProducto($id)
+    {
         $producto = $this->productoDB->getById($id);
-        if(!$producto){
+        if (!$producto) {
             return $this->respuestaNoEncontrada();
         }
         $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
@@ -63,22 +66,30 @@ class ProductoController {
         return $respuesta;
     }
 
-    private function getAllProductos(){
-        $productos = $this->productoDB->getAll();
+    private function getAllProductos()
+    {
+        // Obtener parámetros de paginación y búsqueda
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+        $search = isset($_GET['search']) ? $_GET['search'] : '';
+
+        // Usar nuevo método paginado
+        $resultado = $this->productoDB->getAllPaginated($page, $limit, $search);
 
         $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
         $respuesta['body'] = json_encode([
             'success' => true,
-            'data' => $productos,
-            'count' => count($productos)
+            'data' => $resultado['data'],
+            'pagination' => $resultado['pagination']
         ]);
         return $respuesta;
     }
 
-    private function createProducto(){
+    private function createProducto()
+    {
         $input = json_decode(file_get_contents("php://input"), true);
-        
-        if(!$input || !isset($input['codigo']) || !isset($input['nombre']) || !isset($input['precio']) || !isset($input['descripcion']) || !isset($input['imagen'])){
+
+        if (!$input || !isset($input['codigo']) || !isset($input['nombre']) || !isset($input['precio']) || !isset($input['descripcion']) || !isset($input['imagen'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -86,15 +97,15 @@ class ProductoController {
             ]);
             return $respuesta;
         }
-        
+
         $resultado = $this->productoDB->createProducto($input['codigo'], $input['nombre'], $input['precio'], $input['descripcion'], $input['imagen']);
-        if($resultado){
+        if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 201 Created';
             $respuesta['body'] = json_encode([
                 'success' => true,
                 'message' => 'Producto creado correctamente'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -104,10 +115,11 @@ class ProductoController {
         return $respuesta;
     }
 
-    private function actualizarProducto($id){
+    private function actualizarProducto($id)
+    {
         $input = json_decode(file_get_contents("php://input"), true);
-        
-        if(!$input || !isset($input['codigo']) || !isset($input['nombre']) || !isset($input['precio']) || !isset($input['descripcion']) || !isset($input['imagen'])){
+
+        if (!$input || !isset($input['codigo']) || !isset($input['nombre']) || !isset($input['precio']) || !isset($input['descripcion']) || !isset($input['imagen'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -115,20 +127,20 @@ class ProductoController {
             ]);
             return $respuesta;
         }
-        
+
         $producto = $this->productoDB->getById($id);
-        if(!$producto){
+        if (!$producto) {
             return $this->respuestaNoEncontrada();
         }
-        
+
         $resultado = $this->productoDB->updateProducto($id, $input['codigo'], $input['nombre'], $input['precio'], $input['descripcion'], $input['imagen']);
-        if($resultado){
+        if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([
                 'success' => true,
                 'message' => 'Producto actualizado correctamente'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -138,30 +150,32 @@ class ProductoController {
         return $respuesta;
     }
 
-    private function deleteProducto($id){
+    private function deleteProducto($id)
+    {
         $producto = $this->productoDB->getById($id);
-        if(!$producto){
+        if (!$producto) {
             return $this->respuestaNoEncontrada();
         }
-        
+
         $resultado = $this->productoDB->delete($id);
-        if($resultado){
+        if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([
                 'success' => true,
                 'message' => 'Producto eliminado correctamente'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
-                'error' => 'Error al eliminar el producto'
+                'error' => 'Error al eliminar el producto. Puede estar incluido en pedidos existentes.'
             ]);
         }
         return $respuesta;
     }
 
-    private function respuestaNoEncontrada(){
+    private function respuestaNoEncontrada()
+    {
         $respuesta['status_code_header'] = 'HTTP/1.1 404 Not Found';
         $respuesta['body'] = json_encode([
             'success' => false,

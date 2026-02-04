@@ -1,6 +1,7 @@
 <?php
 
-class UsuarioController {
+class UsuarioController
+{
     private $usuarioDB;
     private $requestMethod;
     private $usuarioId;
@@ -12,14 +13,15 @@ class UsuarioController {
         $this->usuarioId = $usuarioId;
     }
 
-    public function processRequest(){
+    public function processRequest()
+    {
         $method = $this->requestMethod;
 
-        switch($method){
+        switch ($method) {
             case 'GET':
-                if($this->usuarioId){
+                if ($this->usuarioId) {
                     $respuesta = $this->getUsuario($this->usuarioId);
-                }else{
+                } else {
                     $respuesta = $this->getAllUsuarios();
                 }
                 break;
@@ -27,16 +29,16 @@ class UsuarioController {
                 $respuesta = $this->createUsuario();
                 break;
             case 'PUT':
-                if($this->usuarioId){
+                if ($this->usuarioId) {
                     $respuesta = $this->updateUsuario($this->usuarioId);
-                }else{
+                } else {
                     $respuesta = $this->respuestaNoEncontrada();
                 }
                 break;
             case 'DELETE':
-                if($this->usuarioId){
+                if ($this->usuarioId) {
                     $respuesta = $this->deleteUsuario($this->usuarioId);
-                }else{
+                } else {
                     $respuesta = $this->respuestaNoEncontrada();
                 }
                 break;
@@ -45,14 +47,15 @@ class UsuarioController {
         }
 
         header($respuesta['status_code_header']);
-        if($respuesta['body']){
+        if ($respuesta['body']) {
             echo $respuesta['body'];
         }
     }
 
-    private function getUsuario($id){
+    private function getUsuario($id)
+    {
         $usuario = $this->usuarioDB->getById($id);
-        if(!$usuario){
+        if (!$usuario) {
             return $this->respuestaNoEncontrada();
         }
         $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
@@ -63,22 +66,30 @@ class UsuarioController {
         return $respuesta;
     }
 
-    private function getAllUsuarios(){
-        $usuarios = $this->usuarioDB->getAll();
+    private function getAllUsuarios()
+    {
+        // Obtener parámetros de paginación y búsqueda
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+        $search = isset($_GET['search']) ? $_GET['search'] : '';
+
+        // Usar nuevo método paginado
+        $resultado = $this->usuarioDB->getAllPaginated($page, $limit, $search);
 
         $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
         $respuesta['body'] = json_encode([
             'success' => true,
-            'data' => $usuarios,
-            'count' => count($usuarios)
+            'data' => $resultado['data'],
+            'pagination' => $resultado['pagination']
         ]);
         return $respuesta;
     }
 
-    private function createUsuario(){
+    private function createUsuario()
+    {
         $input = json_decode(file_get_contents("php://input"), true);
 
-        if(!$input || !isset($input['email']) || !isset($input['password']) || !isset($input['nombre'])){
+        if (!$input || !isset($input['email']) || !isset($input['password']) || !isset($input['nombre'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -89,7 +100,7 @@ class UsuarioController {
 
         // Verificar si el email ya existe
         $existente = $this->usuarioDB->getByEmail($input['email']);
-        if($existente){
+        if ($existente) {
             $respuesta['status_code_header'] = 'HTTP/1.1 409 Conflict';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -101,13 +112,13 @@ class UsuarioController {
         $rol = isset($input['rol']) ? $input['rol'] : 'usuario';
 
         $resultado = $this->usuarioDB->create($input['email'], $input['password'], $input['nombre'], $rol);
-        if($resultado){
+        if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 201 Created';
             $respuesta['body'] = json_encode([
                 'success' => true,
                 'message' => 'Usuario creado correctamente'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -117,10 +128,11 @@ class UsuarioController {
         return $respuesta;
     }
 
-    private function updateUsuario($id){
+    private function updateUsuario($id)
+    {
         $input = json_decode(file_get_contents("php://input"), true);
 
-        if(!$input || !isset($input['email']) || !isset($input['nombre']) || !isset($input['rol'])){
+        if (!$input || !isset($input['email']) || !isset($input['nombre']) || !isset($input['rol'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -130,20 +142,20 @@ class UsuarioController {
         }
 
         $usuario = $this->usuarioDB->getById($id);
-        if(!$usuario){
+        if (!$usuario) {
             return $this->respuestaNoEncontrada();
         }
 
         $activo = isset($input['activo']) ? (int)$input['activo'] : 1;
 
         $resultado = $this->usuarioDB->update($id, $input['email'], $input['nombre'], $input['rol'], $activo);
-        if($resultado){
+        if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([
                 'success' => true,
                 'message' => 'Usuario actualizado correctamente'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -153,20 +165,21 @@ class UsuarioController {
         return $respuesta;
     }
 
-    private function deleteUsuario($id){
+    private function deleteUsuario($id)
+    {
         $usuario = $this->usuarioDB->getById($id);
-        if(!$usuario){
+        if (!$usuario) {
             return $this->respuestaNoEncontrada();
         }
 
         $resultado = $this->usuarioDB->delete($id);
-        if($resultado){
+        if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([
                 'success' => true,
                 'message' => 'Usuario eliminado correctamente'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -176,7 +189,8 @@ class UsuarioController {
         return $respuesta;
     }
 
-    private function respuestaNoEncontrada(){
+    private function respuestaNoEncontrada()
+    {
         $respuesta['status_code_header'] = 'HTTP/1.1 404 Not Found';
         $respuesta['body'] = json_encode([
             'success' => false,

@@ -6,7 +6,7 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json; charset=UTF-8");
 
 // Manejar preflight requests
-if($_SERVER['REQUEST_METHOD'] === 'OPTIONS'){
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
@@ -30,7 +30,7 @@ $requestMethod = $_SERVER['REQUEST_METHOD'];
 $segmentos = explode('/', trim($requestUrl, '/'));
 
 // Validar estructura básica de la URL
-if(!isset($segmentos[1]) || $segmentos[1] !== 'api' || !isset($segmentos[2])){
+if (!isset($segmentos[1]) || $segmentos[1] !== 'api' || !isset($segmentos[2])) {
     http_response_code(404);
     echo json_encode([
         'success' => false,
@@ -66,7 +66,7 @@ $accion = isset($segmentos[4]) ? $segmentos[4] : null;
 
 $database = new Database();
 
-switch($recurso){
+switch ($recurso) {
     case 'productos':
         $productoId = $id ? (int)$id : null;
         $controller = new ProductoController($database, $requestMethod, $productoId);

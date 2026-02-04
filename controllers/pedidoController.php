@@ -1,6 +1,7 @@
 <?php
 
-class PedidoController {
+class PedidoController
+{
     private $pedidoDB;
     private $detallePedidoDB;
     private $productoDB;
@@ -18,23 +19,24 @@ class PedidoController {
         $this->accion = $accion;
     }
 
-    public function processRequest(){
+    public function processRequest()
+    {
         $method = $this->requestMethod;
 
         // Manejar acciones especiales (detalles, estado)
-        if($this->accion === 'detalles' && $this->pedidoId){
+        if ($this->accion === 'detalles' && $this->pedidoId) {
             return $this->processDetalles();
         }
 
-        if($this->accion === 'estado' && $this->pedidoId && $method === 'PUT'){
+        if ($this->accion === 'estado' && $this->pedidoId && $method === 'PUT') {
             return $this->cambiarEstado($this->pedidoId);
         }
 
-        switch($method){
+        switch ($method) {
             case 'GET':
-                if($this->pedidoId){
+                if ($this->pedidoId) {
                     $respuesta = $this->getPedido($this->pedidoId);
-                }else{
+                } else {
                     $respuesta = $this->getAllPedidos();
                 }
                 break;
@@ -42,16 +44,16 @@ class PedidoController {
                 $respuesta = $this->createPedido();
                 break;
             case 'PUT':
-                if($this->pedidoId){
+                if ($this->pedidoId) {
                     $respuesta = $this->updatePedido($this->pedidoId);
-                }else{
+                } else {
                     $respuesta = $this->respuestaNoEncontrada();
                 }
                 break;
             case 'DELETE':
-                if($this->pedidoId){
+                if ($this->pedidoId) {
                     $respuesta = $this->deletePedido($this->pedidoId);
-                }else{
+                } else {
                     $respuesta = $this->respuestaNoEncontrada();
                 }
                 break;
@@ -60,15 +62,16 @@ class PedidoController {
         }
 
         header($respuesta['status_code_header']);
-        if($respuesta['body']){
+        if ($respuesta['body']) {
             echo $respuesta['body'];
         }
     }
 
-    private function processDetalles(){
+    private function processDetalles()
+    {
         $method = $this->requestMethod;
 
-        switch($method){
+        switch ($method) {
             case 'GET':
                 $respuesta = $this->getDetallesPedido($this->pedidoId);
                 break;
@@ -83,14 +86,15 @@ class PedidoController {
         }
 
         header($respuesta['status_code_header']);
-        if($respuesta['body']){
+        if ($respuesta['body']) {
             echo $respuesta['body'];
         }
     }
 
-    private function getPedido($id){
+    private function getPedido($id)
+    {
         $pedido = $this->pedidoDB->getById($id);
-        if(!$pedido){
+        if (!$pedido) {
             return $this->respuestaNoEncontrada();
         }
 
@@ -105,22 +109,31 @@ class PedidoController {
         return $respuesta;
     }
 
-    private function getAllPedidos(){
-        $pedidos = $this->pedidoDB->getAll();
+    private function getAllPedidos()
+    {
+        // Obtener parámetros de paginación y filtros
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+        $estado = isset($_GET['estado']) ? $_GET['estado'] : '';
+        $usuarioId = isset($_GET['usuario_id']) ? (int)$_GET['usuario_id'] : null;
+
+        // Usar nuevo método paginado
+        $resultado = $this->pedidoDB->getAllPaginated($page, $limit, $estado, $usuarioId);
 
         $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
         $respuesta['body'] = json_encode([
             'success' => true,
-            'data' => $pedidos,
-            'count' => count($pedidos)
+            'data' => $resultado['data'],
+            'pagination' => $resultado['pagination']
         ]);
         return $respuesta;
     }
 
-    private function createPedido(){
+    private function createPedido()
+    {
         $input = json_decode(file_get_contents("php://input"), true);
 
-        if(!$input || !isset($input['usuario_id']) || !isset($input['direccion_envio'])){
+        if (!$input || !isset($input['usuario_id']) || !isset($input['direccion_envio'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -133,13 +146,13 @@ class PedidoController {
 
         $pedidoId = $this->pedidoDB->create($input['usuario_id'], $input['direccion_envio'], $notas);
 
-        if($pedidoId){
+        if ($pedidoId) {
             // Si vienen productos, agregarlos al pedido
-            if(isset($input['productos']) && is_array($input['productos'])){
-                foreach($input['productos'] as $item){
-                    if(isset($item['producto_id']) && isset($item['cantidad'])){
+            if (isset($input['productos']) && is_array($input['productos'])) {
+                foreach ($input['productos'] as $item) {
+                    if (isset($item['producto_id']) && isset($item['cantidad'])) {
                         $producto = $this->productoDB->getById($item['producto_id']);
-                        if($producto){
+                        if ($producto) {
                             $precio = isset($item['precio_unitario']) ? $item['precio_unitario'] : $producto['precio'];
                             $this->detallePedidoDB->create($pedidoId, $item['producto_id'], $item['cantidad'], $precio);
                         }
@@ -155,7 +168,7 @@ class PedidoController {
                 'message' => 'Pedido creado correctamente',
                 'pedido_id' => $pedidoId
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -165,11 +178,12 @@ class PedidoController {
         return $respuesta;
     }
 
-    private function updatePedido($id){
+    private function updatePedido($id)
+    {
         $input = json_decode(file_get_contents("php://input"), true);
 
         $pedido = $this->pedidoDB->getById($id);
-        if(!$pedido){
+        if (!$pedido) {
             return $this->respuestaNoEncontrada();
         }
 
@@ -177,13 +191,13 @@ class PedidoController {
         $notas = isset($input['notas']) ? $input['notas'] : $pedido['notas'];
 
         $resultado = $this->pedidoDB->update($id, $direccionEnvio, $notas);
-        if($resultado){
+        if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([
                 'success' => true,
                 'message' => 'Pedido actualizado correctamente'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -193,10 +207,11 @@ class PedidoController {
         return $respuesta;
     }
 
-    private function cambiarEstado($id){
+    private function cambiarEstado($id)
+    {
         $input = json_decode(file_get_contents("php://input"), true);
 
-        if(!$input || !isset($input['estado'])){
+        if (!$input || !isset($input['estado'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -206,7 +221,7 @@ class PedidoController {
         }
 
         $estadosValidos = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'];
-        if(!in_array($input['estado'], $estadosValidos)){
+        if (!in_array($input['estado'], $estadosValidos)) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -216,18 +231,18 @@ class PedidoController {
         }
 
         $pedido = $this->pedidoDB->getById($id);
-        if(!$pedido){
+        if (!$pedido) {
             return $this->respuestaNoEncontrada();
         }
 
         $resultado = $this->pedidoDB->updateEstado($id, $input['estado']);
-        if($resultado){
+        if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([
                 'success' => true,
                 'message' => 'Estado actualizado correctamente'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -240,20 +255,21 @@ class PedidoController {
         exit();
     }
 
-    private function deletePedido($id){
+    private function deletePedido($id)
+    {
         $pedido = $this->pedidoDB->getById($id);
-        if(!$pedido){
+        if (!$pedido) {
             return $this->respuestaNoEncontrada();
         }
 
         $resultado = $this->pedidoDB->delete($id);
-        if($resultado){
+        if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([
                 'success' => true,
                 'message' => 'Pedido eliminado correctamente'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -263,9 +279,10 @@ class PedidoController {
         return $respuesta;
     }
 
-    private function getDetallesPedido($pedidoId){
+    private function getDetallesPedido($pedidoId)
+    {
         $pedido = $this->pedidoDB->getById($pedidoId);
-        if(!$pedido){
+        if (!$pedido) {
             return $this->respuestaNoEncontrada();
         }
 
@@ -280,10 +297,11 @@ class PedidoController {
         return $respuesta;
     }
 
-    private function addDetalle($pedidoId){
+    private function addDetalle($pedidoId)
+    {
         $input = json_decode(file_get_contents("php://input"), true);
 
-        if(!$input || !isset($input['producto_id']) || !isset($input['cantidad'])){
+        if (!$input || !isset($input['producto_id']) || !isset($input['cantidad'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -293,12 +311,12 @@ class PedidoController {
         }
 
         $pedido = $this->pedidoDB->getById($pedidoId);
-        if(!$pedido){
+        if (!$pedido) {
             return $this->respuestaNoEncontrada();
         }
 
         $producto = $this->productoDB->getById($input['producto_id']);
-        if(!$producto){
+        if (!$producto) {
             $respuesta['status_code_header'] = 'HTTP/1.1 404 Not Found';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -311,7 +329,7 @@ class PedidoController {
 
         $detalleId = $this->detallePedidoDB->create($pedidoId, $input['producto_id'], $input['cantidad'], $precio);
 
-        if($detalleId){
+        if ($detalleId) {
             $this->pedidoDB->recalcularTotal($pedidoId);
 
             $respuesta['status_code_header'] = 'HTTP/1.1 201 Created';
@@ -320,7 +338,7 @@ class PedidoController {
                 'message' => 'Producto agregado al pedido',
                 'detalle_id' => $detalleId
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -330,10 +348,11 @@ class PedidoController {
         return $respuesta;
     }
 
-    private function removeDetalle($pedidoId){
+    private function removeDetalle($pedidoId)
+    {
         $input = json_decode(file_get_contents("php://input"), true);
 
-        if(!$input || !isset($input['detalle_id'])){
+        if (!$input || !isset($input['detalle_id'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -343,7 +362,7 @@ class PedidoController {
         }
 
         $detalle = $this->detallePedidoDB->getById($input['detalle_id']);
-        if(!$detalle || $detalle['pedido_id'] != $pedidoId){
+        if (!$detalle || $detalle['pedido_id'] != $pedidoId) {
             $respuesta['status_code_header'] = 'HTTP/1.1 404 Not Found';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -353,7 +372,7 @@ class PedidoController {
         }
 
         $resultado = $this->detallePedidoDB->delete($input['detalle_id']);
-        if($resultado){
+        if ($resultado) {
             $this->pedidoDB->recalcularTotal($pedidoId);
 
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
@@ -361,7 +380,7 @@ class PedidoController {
                 'success' => true,
                 'message' => 'Producto eliminado del pedido'
             ]);
-        }else{
+        } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
@@ -371,7 +390,8 @@ class PedidoController {
         return $respuesta;
     }
 
-    private function respuestaNoEncontrada(){
+    private function respuestaNoEncontrada()
+    {
         $respuesta['status_code_header'] = 'HTTP/1.1 404 Not Found';
         $respuesta['body'] = json_encode([
             'success' => false,

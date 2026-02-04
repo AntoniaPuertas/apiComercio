@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - API Comercio</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>API Comercio</h1>
+                <span class="badge">Admin</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-section="productos">
+                    <span class="nav-icon">&#128230;</span>
+                    <span>Productos</span>
+                </a>
+                <a href="#" class="nav-item" data-section="usuarios">
+                    <span class="nav-icon">&#128100;</span>
+                    <span>Usuarios</span>
+                </a>
+                <a href="#" class="nav-item" data-section="pedidos">
+                    <span class="nav-icon">&#128220;</span>
+                    <span>Pedidos</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <small>v1.0.0</small>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <h2 id="section-title">Productos</h2>
+                <button id="btn-nuevo" class="btn btn-primary">+ Nuevo</button>
+            </header>
+
+            <!-- Filters Bar -->
+            <div class="filters-bar">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Buscar...">
+                </div>
+                <div class="filter-select" id="filter-estado-container" style="display: none;">
+                    <select id="filter-estado">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="procesando">Procesando</option>
+                        <option value="enviado">Enviado</option>
+                        <option value="entregado">Entregado</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
+                </div>
+                <div class="filter-select" id="filter-cliente-container" style="display: none;">
+                    <select id="filter-cliente">
+                        <option value="">Todos los clientes</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead id="table-head">
+                        <!-- Dynamic headers -->
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+                <div id="loading" class="loading">Cargando...</div>
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    No se encontraron resultados
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <button id="btn-prev" class="btn btn-secondary" disabled>Anterior</button>
+                <span id="pagination-info">Pagina 1 de 1</span>
+                <button id="btn-next" class="btn btn-secondary" disabled>Siguiente</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Titulo</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Dynamic form -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">Cancelar</button>
+                <button class="btn btn-primary" id="modal-save">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/productos.js"></script>
+    <script src="js/usuarios.js"></script>
+    <script src="js/pedidos.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
