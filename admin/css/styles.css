@@ -405,7 +405,7 @@ body {
     border-radius: var(--radius);
     box-shadow: var(--shadow-lg);
     width: 100%;
-    max-width: 500px;
+    max-width: 600px;
     max-height: 90vh;
     overflow: hidden;
     display: flex;
@@ -596,6 +596,64 @@ body {
 .detalles-table tfoot td {
     font-weight: 600;
     background: var(--light);
+}
+
+/* =============================================
+   Add Product Form (Pedido Details)
+   ============================================= */
+
+.add-product-form {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--light);
+    border-radius: var(--radius);
+}
+
+.add-product-form h4 {
+    margin-bottom: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.add-product-form .form-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.add-product-form .form-group {
+    margin-bottom: 0;
+}
+
+.add-product-form select,
+.add-product-form input {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+}
+
+/* =============================================
+   Quantity Controls
+   ============================================= */
+
+.cantidad-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cantidad-controls button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.cantidad-controls .cantidad-value {
+    min-width: 30px;
+    text-align: center;
+    font-weight: 600;
 }
 
 /* =============================================

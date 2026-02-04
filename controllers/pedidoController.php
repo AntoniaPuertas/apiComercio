@@ -78,6 +78,9 @@ class PedidoController
             case 'POST':
                 $respuesta = $this->addDetalle($this->pedidoId);
                 break;
+            case 'PUT':
+                $respuesta = $this->updateDetalleCantidad($this->pedidoId);
+                break;
             case 'DELETE':
                 $respuesta = $this->removeDetalle($this->pedidoId);
                 break;
@@ -315,6 +318,17 @@ class PedidoController
             return $this->respuestaNoEncontrada();
         }
 
+        // Verificar si el pedido es editable
+        $estadosNoEditables = ['enviado', 'entregado', 'cancelado'];
+        if (in_array($pedido['estado'], $estadosNoEditables)) {
+            $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
+            $respuesta['body'] = json_encode([
+                'success' => false,
+                'error' => 'No se puede modificar un pedido en estado: ' . $pedido['estado']
+            ]);
+            return $respuesta;
+        }
+
         $producto = $this->productoDB->getById($input['producto_id']);
         if (!$producto) {
             $respuesta['status_code_header'] = 'HTTP/1.1 404 Not Found';
@@ -327,22 +341,114 @@ class PedidoController
 
         $precio = isset($input['precio_unitario']) ? $input['precio_unitario'] : $producto['precio'];
 
-        $detalleId = $this->detallePedidoDB->create($pedidoId, $input['producto_id'], $input['cantidad'], $precio);
+        // Buscar si ya existe el producto con el mismo precio
+        $detalleExistente = $this->detallePedidoDB->findByProductoAndPrecio($pedidoId, $input['producto_id'], $precio);
 
-        if ($detalleId) {
+        if ($detalleExistente) {
+            // Sumar la cantidad al detalle existente
+            $nuevaCantidad = $detalleExistente['cantidad'] + $input['cantidad'];
+            $resultado = $this->detallePedidoDB->updateCantidad($detalleExistente['id'], $nuevaCantidad);
+
+            if ($resultado) {
+                $this->pedidoDB->recalcularTotal($pedidoId);
+                $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
+                $respuesta['body'] = json_encode([
+                    'success' => true,
+                    'message' => 'Cantidad actualizada en el pedido',
+                    'detalle_id' => $detalleExistente['id']
+                ]);
+            } else {
+                $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
+                $respuesta['body'] = json_encode([
+                    'success' => false,
+                    'error' => 'Error al actualizar la cantidad'
+                ]);
+            }
+        } else {
+            // Crear nuevo detalle
+            $detalleId = $this->detallePedidoDB->create($pedidoId, $input['producto_id'], $input['cantidad'], $precio);
+
+            if ($detalleId) {
+                $this->pedidoDB->recalcularTotal($pedidoId);
+                $respuesta['status_code_header'] = 'HTTP/1.1 201 Created';
+                $respuesta['body'] = json_encode([
+                    'success' => true,
+                    'message' => 'Producto agregado al pedido',
+                    'detalle_id' => $detalleId
+                ]);
+            } else {
+                $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
+                $respuesta['body'] = json_encode([
+                    'success' => false,
+                    'error' => 'Error al agregar el producto'
+                ]);
+            }
+        }
+        return $respuesta;
+    }
+
+    private function updateDetalleCantidad($pedidoId)
+    {
+        $input = json_decode(file_get_contents("php://input"), true);
+
+        if (!$input || !isset($input['detalle_id']) || !isset($input['cantidad'])) {
+            $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
+            $respuesta['body'] = json_encode([
+                'success' => false,
+                'error' => 'Datos incompletos. Se requieren: detalle_id, cantidad'
+            ]);
+            return $respuesta;
+        }
+
+        $pedido = $this->pedidoDB->getById($pedidoId);
+        if (!$pedido) {
+            return $this->respuestaNoEncontrada();
+        }
+
+        // Verificar si el pedido es editable
+        $estadosNoEditables = ['enviado', 'entregado', 'cancelado'];
+        if (in_array($pedido['estado'], $estadosNoEditables)) {
+            $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
+            $respuesta['body'] = json_encode([
+                'success' => false,
+                'error' => 'No se puede modificar un pedido en estado: ' . $pedido['estado']
+            ]);
+            return $respuesta;
+        }
+
+        $detalle = $this->detallePedidoDB->getById($input['detalle_id']);
+        if (!$detalle || $detalle['pedido_id'] != $pedidoId) {
+            $respuesta['status_code_header'] = 'HTTP/1.1 404 Not Found';
+            $respuesta['body'] = json_encode([
+                'success' => false,
+                'error' => 'Detalle no encontrado en este pedido'
+            ]);
+            return $respuesta;
+        }
+
+        if ($input['cantidad'] < 1) {
+            $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
+            $respuesta['body'] = json_encode([
+                'success' => false,
+                'error' => 'La cantidad debe ser mayor a 0'
+            ]);
+            return $respuesta;
+        }
+
+        $resultado = $this->detallePedidoDB->updateCantidad($input['detalle_id'], $input['cantidad']);
+
+        if ($resultado) {
             $this->pedidoDB->recalcularTotal($pedidoId);
-
-            $respuesta['status_code_header'] = 'HTTP/1.1 201 Created';
+            $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([
                 'success' => true,
-                'message' => 'Producto agregado al pedido',
-                'detalle_id' => $detalleId
+                'message' => 'Cantidad actualizada'
             ]);
         } else {
             $respuesta['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
             $respuesta['body'] = json_encode([
                 'success' => false,
-                'error' => 'Error al agregar el producto'
+                'error' => 'Error al actualizar la cantidad'
             ]);
         }
         return $respuesta;
@@ -357,6 +463,22 @@ class PedidoController
             $respuesta['body'] = json_encode([
                 'success' => false,
                 'error' => 'Se requiere el campo: detalle_id'
+            ]);
+            return $respuesta;
+        }
+
+        $pedido = $this->pedidoDB->getById($pedidoId);
+        if (!$pedido) {
+            return $this->respuestaNoEncontrada();
+        }
+
+        // Verificar si el pedido es editable
+        $estadosNoEditables = ['enviado', 'entregado', 'cancelado'];
+        if (in_array($pedido['estado'], $estadosNoEditables)) {
+            $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
+            $respuesta['body'] = json_encode([
+                'success' => false,
+                'error' => 'No se puede modificar un pedido en estado: ' . $pedido['estado']
             ]);
             return $respuesta;
         }

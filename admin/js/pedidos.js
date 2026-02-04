@@ -6,6 +6,14 @@ const PedidosModule = {
     currentEstado: '',
     currentCliente: '',
     clientesLoaded: false,
+    estadosLoaded: false,
+    estados: [
+        { value: 'pendiente', label: 'Pendiente' },
+        { value: 'procesando', label: 'Procesando' },
+        { value: 'enviado', label: 'Enviado' },
+        { value: 'entregado', label: 'Entregado' },
+        { value: 'cancelado', label: 'Cancelado' }
+    ],
 
     // =========================================
     // Inicializacion
@@ -31,6 +39,25 @@ const PedidosModule = {
         });
 
         document.getElementById('btn-nuevo').onclick = () => this.showForm();
+    },
+
+    // =========================================
+    // Cargar estados en el filtro
+    // =========================================
+
+    loadEstados() {
+        if (this.estadosLoaded) return;
+
+        const filterEstado = document.getElementById('filter-estado');
+
+        this.estados.forEach(e => {
+            const option = document.createElement('option');
+            option.value = e.value;
+            option.textContent = e.label;
+            filterEstado.appendChild(option);
+        });
+
+        this.estadosLoaded = true;
     },
 
     // =========================================
@@ -146,13 +173,19 @@ const PedidosModule = {
 
     async showDetails(id) {
         try {
-            const [pedidoRes, detallesRes] = await Promise.all([
+            const [pedidoRes, detallesRes, productosRes] = await Promise.all([
                 API.pedidos.getById(id),
-                API.pedidos.getDetalles(id)
+                API.pedidos.getDetalles(id),
+                API.productos.getAll({ limit: 100 })
             ]);
 
             const pedido = pedidoRes.data;
             const detalles = detallesRes.data || [];
+            const productos = productosRes.data || [];
+
+            // Verificar si el pedido es editable
+            const estadosNoEditables = ['enviado', 'entregado', 'cancelado'];
+            const esEditable = !estadosNoEditables.includes(pedido.estado);
 
             const detallesHtml = detalles.length > 0 ? `
                 <table class="detalles-table">
@@ -162,15 +195,29 @@ const PedidosModule = {
                             <th>Cantidad</th>
                             <th>Precio Unit.</th>
                             <th>Subtotal</th>
+                            ${esEditable ? '<th></th>' : ''}
                         </tr>
                     </thead>
                     <tbody>
                         ${detalles.map(d => `
                             <tr>
                                 <td>${Components.helpers.escapeHtml(d.producto_nombre || 'Producto #' + d.producto_id)}</td>
-                                <td>${d.cantidad}</td>
+                                <td>
+                                    ${esEditable ? `
+                                        <div class="cantidad-controls">
+                                            <button class="btn btn-sm btn-secondary" onclick="PedidosModule.changeCantidad(${id}, ${d.id}, ${d.cantidad}, -1)">-</button>
+                                            <span class="cantidad-value">${d.cantidad}</span>
+                                            <button class="btn btn-sm btn-secondary" onclick="PedidosModule.changeCantidad(${id}, ${d.id}, ${d.cantidad}, 1)">+</button>
+                                        </div>
+                                    ` : d.cantidad}
+                                </td>
                                 <td>${Components.helpers.formatPrice(d.precio_unitario)}</td>
                                 <td>${Components.helpers.formatPrice(d.subtotal)}</td>
+                                ${esEditable ? `
+                                    <td>
+                                        <button class="btn btn-danger btn-sm" onclick="PedidosModule.removeDetalle(${id}, ${d.id})">X</button>
+                                    </td>
+                                ` : ''}
                             </tr>
                         `).join('')}
                     </tbody>
@@ -178,10 +225,39 @@ const PedidosModule = {
                         <tr>
                             <td colspan="3" class="text-right"><strong>Total:</strong></td>
                             <td><strong>${Components.helpers.formatPrice(pedido.total)}</strong></td>
+                            ${esEditable ? '<td></td>' : ''}
                         </tr>
                     </tfoot>
                 </table>
-            ` : '<p class="text-muted">No hay detalles para este pedido</p>';
+            ` : '<p class="text-muted">No hay productos en este pedido</p>';
+
+            const addProductHtml = esEditable ? `
+                <div class="add-product-form" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                    <h4 style="margin-bottom: 12px;">Agregar Producto</h4>
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 2;">
+                            <select id="detalle-producto">
+                                <option value="">Seleccionar producto</option>
+                                ${productos.map(p => `
+                                    <option value="${p.id}" data-precio="${p.precio}">
+                                        ${Components.helpers.escapeHtml(p.nombre)} - ${Components.helpers.formatPrice(p.precio)}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <input type="number" id="detalle-cantidad" placeholder="Cantidad" min="1" value="1">
+                        </div>
+                        <div class="form-group" style="flex: 0;">
+                            <button class="btn btn-primary" onclick="PedidosModule.addDetalle(${id})">Agregar</button>
+                        </div>
+                    </div>
+                </div>
+            ` : `
+                <div class="text-muted" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                    <p>Este pedido no puede modificarse porque su estado es: <strong>${pedido.estado}</strong></p>
+                </div>
+            `;
 
             const contentHtml = `
                 <div class="pedido-info">
@@ -193,15 +269,97 @@ const PedidosModule = {
                     <p><strong>Notas:</strong> ${Components.helpers.escapeHtml(pedido.notas || 'Sin notas')}</p>
                     <p><strong>Fecha:</strong> ${Components.helpers.formatDate(pedido.created_at)}</p>
                 </div>
-                <h4>Detalles del Pedido</h4>
+                <h4>Productos del Pedido</h4>
                 ${detallesHtml}
+                ${addProductHtml}
             `;
 
-            Components.modal.open('Detalles del Pedido #' + id, contentHtml, null);
+            Components.modal.open('Detalles del Pedido #' + id, contentHtml, null, 'Guardar', 'Cerrar');
             Components.modal.showSaveButton(false);
 
         } catch (error) {
             Components.toast.error('Error al cargar detalles del pedido');
+        }
+    },
+
+    // =========================================
+    // Agregar detalle al pedido
+    // =========================================
+
+    async addDetalle(pedidoId) {
+        const productoSelect = document.getElementById('detalle-producto');
+        const cantidadInput = document.getElementById('detalle-cantidad');
+
+        const productoId = parseInt(productoSelect.value);
+        const cantidad = parseInt(cantidadInput.value);
+
+        if (!productoId) {
+            Components.toast.error('Selecciona un producto');
+            return;
+        }
+
+        if (!cantidad || cantidad < 1) {
+            Components.toast.error('La cantidad debe ser mayor a 0');
+            return;
+        }
+
+        try {
+            await API.pedidos.addDetalle(pedidoId, {
+                producto_id: productoId,
+                cantidad: cantidad
+            });
+
+            Components.toast.success('Producto agregado al pedido');
+            Components.modal.close();
+            this.showDetails(pedidoId);
+            this.loadData(Components.pagination.currentPage);
+
+        } catch (error) {
+            Components.toast.error(error.message || 'Error al agregar producto');
+        }
+    },
+
+    // =========================================
+    // Eliminar detalle del pedido
+    // =========================================
+
+    async removeDetalle(pedidoId, detalleId) {
+        if (!confirm('¿Eliminar este producto del pedido?')) {
+            return;
+        }
+
+        try {
+            await API.pedidos.deleteDetalle(pedidoId, detalleId);
+            Components.toast.success('Producto eliminado del pedido');
+            Components.modal.close();
+            this.showDetails(pedidoId);
+            this.loadData(Components.pagination.currentPage);
+
+        } catch (error) {
+            Components.toast.error(error.message || 'Error al eliminar producto');
+        }
+    },
+
+    // =========================================
+    // Cambiar cantidad de un detalle
+    // =========================================
+
+    async changeCantidad(pedidoId, detalleId, cantidadActual, delta) {
+        const nuevaCantidad = cantidadActual + delta;
+
+        if (nuevaCantidad < 1) {
+            Components.toast.error('La cantidad no puede ser menor a 1');
+            return;
+        }
+
+        try {
+            await API.pedidos.updateCantidad(pedidoId, detalleId, nuevaCantidad);
+            Components.toast.success('Cantidad actualizada');
+            this.showDetails(pedidoId);
+            this.loadData(Components.pagination.currentPage);
+
+        } catch (error) {
+            Components.toast.error(error.message || 'Error al actualizar cantidad');
         }
     },
 
@@ -310,6 +468,7 @@ const PedidosModule = {
         this.currentCliente = '';
         Components.pagination.reset();
         this.init();
+        this.loadEstados();
         this.loadClientes();
         this.loadData();
     },

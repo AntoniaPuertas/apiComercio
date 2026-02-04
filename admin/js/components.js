@@ -49,6 +49,7 @@ const Components = {
         title: null,
         body: null,
         saveBtn: null,
+        cancelBtn: null,
         onSave: null,
 
         init() {
@@ -56,9 +57,10 @@ const Components = {
             this.title = document.getElementById('modal-title');
             this.body = document.getElementById('modal-body');
             this.saveBtn = document.getElementById('modal-save');
+            this.cancelBtn = document.getElementById('modal-cancel');
 
             document.getElementById('modal-close').addEventListener('click', () => this.close());
-            document.getElementById('modal-cancel').addEventListener('click', () => this.close());
+            this.cancelBtn.addEventListener('click', () => this.close());
 
             this.element.addEventListener('click', (e) => {
                 if (e.target === this.element) this.close();
@@ -69,11 +71,14 @@ const Components = {
             });
         },
 
-        open(title, content, onSave, saveText = 'Guardar') {
+        open(title, content, onSave, saveText = 'Guardar', cancelText = 'Cancelar') {
             this.title.textContent = title;
             this.body.innerHTML = content;
             this.onSave = onSave;
             this.saveBtn.textContent = saveText;
+            this.cancelBtn.textContent = cancelText;
+            // Mostrar boton guardar si hay callback, ocultar si no
+            this.saveBtn.style.display = onSave ? 'inline-flex' : 'none';
             this.element.classList.add('active');
         },
 

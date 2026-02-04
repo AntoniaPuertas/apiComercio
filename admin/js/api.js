@@ -160,7 +160,14 @@ const API = {
         },
 
         async deleteDetalle(pedidoId, detalleId) {
-            return API.delete(`/pedidos/${pedidoId}/detalles/${detalleId}`);
+            return API.request(`/pedidos/${pedidoId}/detalles`, {
+                method: 'DELETE',
+                body: JSON.stringify({ detalle_id: detalleId })
+            });
+        },
+
+        async updateCantidad(pedidoId, detalleId, cantidad) {
+            return API.put(`/pedidos/${pedidoId}/detalles`, { detalle_id: detalleId, cantidad: cantidad });
         }
     }
 };
