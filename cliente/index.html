@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Cuenta - API Comercio</title>
+    <!-- Evitar cache para paginas protegidas -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- Estilos compartidos desde admin -->
+    <link rel="stylesheet" href="../admin/css/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>API Comercio</h1>
+                <span class="badge" id="user-role">Cliente</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-section="pedidos">
+                    <span class="nav-icon">&#128220;</span>
+                    <span>Mis Pedidos</span>
+                </a>
+                <a href="#" class="nav-item" data-section="perfil">
+                    <span class="nav-icon">&#128100;</span>
+                    <span>Mi Perfil</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <span id="user-name">Usuario</span>
+                </div>
+                <a href="#" id="btn-logout" class="logout-link">Cerrar sesion</a>
+                <small>v1.0.0</small>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <h2 id="section-title">Mis Pedidos</h2>
+            </header>
+
+            <!-- Content Container -->
+            <div id="content-container">
+                <!-- El contenido se carga dinamicamente -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Titulo</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Dynamic content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">Cerrar</button>
+                <button class="btn btn-primary" id="modal-save" style="display: none;">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts compartidos desde admin -->
+    <script src="../admin/js/auth.js"></script>
+    <!-- Verificacion inmediata de autenticacion -->
+    <script>
+        if (!Auth.isAuthenticated()) {
+            window.location.replace('/apiComercio/login.html');
+        } else {
+            // Verificar que NO sea admin (los admins van al panel admin)
+            const user = Auth.getUser();
+            if (user && user.rol === 'admin') {
+                window.location.replace('/apiComercio/admin/index.html');
+            }
+        }
+    </script>
+    <script src="../admin/js/api.js"></script>
+    <script src="js/pedidos.js"></script>
+    <script src="js/perfil.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

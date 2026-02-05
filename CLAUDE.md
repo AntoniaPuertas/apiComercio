@@ -31,9 +31,46 @@ DB_HOST: localhost
 DB_USER: root
 DB_PASS: '' (vacío)
 DB_NAME: apiComercioDB
+
+// Configuración JWT
+JWT_SECRET_KEY: 'apiComercio_secret_key_2024_cambiar_en_produccion'
+JWT_EXPIRATION: 86400 (24 horas)
+JWT_ISSUER: 'apiComercio'
 ```
 
 MySQL path en WAMP: `c:/wamp64/bin/mysql/mysql9.1.0/bin/mysql.exe`
+
+## Autenticación JWT
+
+### Estructura de archivos
+- `lib/JWT.php` - Librería para generar/validar tokens
+- `lib/AuthMiddleware.php` - Middleware de autorización
+- `controllers/AuthController.php` - Endpoint de login
+- `admin/login.html` - Pantalla de login
+- `admin/js/auth.js` - Módulo JS de autenticación
+
+### Uso del Middleware
+```php
+// Solo admin
+AuthMiddleware::soloAdmin();
+
+// Admin o usuario
+AuthMiddleware::verificar(['admin', 'usuario']);
+
+// Cualquier usuario autenticado
+AuthMiddleware::verificar();
+
+// Verificación opcional (no bloquea)
+$usuario = AuthMiddleware::verificarOpcional();
+```
+
+### Protección de Rutas
+| Endpoint | GET | POST/PUT/DELETE |
+|----------|-----|-----------------|
+| /api/productos | Público | Solo admin |
+| /api/usuarios | Solo admin | Solo admin |
+| /api/pedidos | Admin/Usuario | Solo admin |
+| /api/auth | Público | Público |
 
 ## Tablas de la BD
 
@@ -44,19 +81,25 @@ MySQL path en WAMP: `c:/wamp64/bin/mysql/mysql9.1.0/bin/mysql.exe`
 
 ## Endpoints Implementados
 
+### Autenticación: `/api/auth`
+- `POST /api/auth/login` - Autenticar usuario, retorna token JWT
+- `GET /api/auth/verify` - Verificar validez del token
+
 ### Productos: `/api/productos`
 - CRUD completo (GET, POST, PUT, DELETE)
+- GET es público, POST/PUT/DELETE requiere rol `admin`
 
 ### Usuarios: `/api/usuarios`
 - CRUD completo
 - Passwords hasheados con bcrypt
-- Método `verificarCredenciales()` en modelo (sin usar aún)
+- **Protegido:** Requiere rol `admin`
 
 ### Pedidos: `/api/pedidos`
 - CRUD completo
 - `/pedidos/{id}/estado` - PUT para cambiar estado
 - `/pedidos/{id}/detalles` - GET, POST, DELETE para gestionar líneas
 - Total se recalcula automáticamente
+- GET permite rol `admin` o `usuario`, resto requiere `admin`
 
 ## Patrón de Código
 
@@ -105,16 +148,21 @@ $respuesta['body'] = json_encode([
 ]);
 ```
 
+## Funcionalidades Implementadas
+
+- [x] Autenticación JWT (`lib/JWT.php`)
+- [x] Endpoint de login (`POST /api/auth/login`)
+- [x] Middleware de autorización por rol (`lib/AuthMiddleware.php`)
+- [x] Dashboard admin con login (`admin/login.html`)
+- [x] Paginación en listados
+
 ## Funcionalidades Pendientes (Posibles)
 
-- [ ] Autenticación JWT
-- [ ] Endpoint de login (`POST /api/auth/login`)
-- [ ] Middleware de autorización por rol
-- [ ] Paginación en listados
-- [ ] Filtros y búsqueda
 - [ ] Validación de stock
 - [ ] Historial de cambios de estado
 - [ ] Carrito de compras
+- [ ] Refresh tokens
+- [ ] Rate limiting
 
 ## Datos de Prueba
 

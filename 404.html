@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Pagina no encontrada</title>
+    <link rel="stylesheet" href="/apiComercio/admin/css/styles.css">
+    <style>
+        .error-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--dark) 0%, #334155 100%);
+        }
+
+        .error-container {
+            text-align: center;
+            padding: 40px;
+            max-width: 500px;
+        }
+
+        .error-code {
+            font-size: 8rem;
+            font-weight: 700;
+            color: var(--white);
+            line-height: 1;
+            margin-bottom: 10px;
+            text-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+            color: var(--white);
+            margin-bottom: 20px;
+        }
+
+        .error-message {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .error-actions .btn {
+            padding: 12px 24px;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--white);
+            color: var(--white);
+        }
+
+        .btn-outline:hover {
+            background: var(--white);
+            color: var(--dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-page">
+        <div class="error-container">
+            <div class="error-code">404</div>
+            <h1 class="error-title">Pagina no encontrada</h1>
+            <p class="error-message">
+                Lo sentimos, la pagina que buscas no existe o ha sido movida.
+            </p>
+            <div class="error-actions">
+                <a href="/apiComercio/login.html" class="btn btn-primary">Ir al inicio</a>
+                <a href="javascript:history.back()" class="btn btn-outline">Volver atras</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

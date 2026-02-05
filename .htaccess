@@ -1,4 +1,13 @@
 RewriteEngine On
+
+# Pagina 404 personalizada
+ErrorDocument 404 /apiComercio/404.html
+
+# Solo redirigir peticiones a /api/ al router
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} ^/apiComercio/api/ [NC]
 RewriteRule ^ api/index.php [QSA,L]
+
+# Redirigir raiz a login
+RewriteRule ^$ login.html [L]

@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - API Comercio</title>
+    <!-- Evitar cache para paginas protegidas -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -12,7 +16,7 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h1>API Comercio</h1>
-                <span class="badge">Admin</span>
+                <span class="badge" id="user-role">Admin</span>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-section="productos">
@@ -29,6 +33,10 @@
                 </a>
             </nav>
             <div class="sidebar-footer">
+                <div class="user-info">
+                    <span id="user-name">Usuario</span>
+                </div>
+                <a href="#" id="btn-logout" class="logout-link">Cerrar sesion</a>
                 <small>v1.0.0</small>
             </div>
         </aside>
@@ -104,6 +112,19 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Scripts -->
+    <script src="js/auth.js"></script>
+    <!-- Verificacion inmediata de autenticacion y rol -->
+    <script>
+        if (!Auth.isAuthenticated()) {
+            window.location.replace('/apiComercio/login.html');
+        } else {
+            // Verificar que sea admin
+            const user = Auth.getUser();
+            if (!user || user.rol !== 'admin') {
+                window.location.replace('/apiComercio/cliente/index.html');
+            }
+        }
+    </script>
     <script src="js/api.js"></script>
     <script src="js/components.js"></script>
     <script src="js/productos.js"></script>

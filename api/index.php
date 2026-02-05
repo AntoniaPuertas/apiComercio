@@ -12,6 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once '../config/config.php';
+require_once '../lib/AuthMiddleware.php';
 require_once '../models/productoDB.php';
 require_once '../models/usuarioDB.php';
 require_once '../models/pedidoDB.php';
@@ -19,6 +21,8 @@ require_once '../models/detallePedidoDB.php';
 require_once '../controllers/productoController.php';
 require_once '../controllers/usuarioController.php';
 require_once '../controllers/pedidoController.php';
+require_once '../controllers/AuthController.php';
+require_once '../controllers/PerfilController.php';
 
 // Averiguar la url de la petición
 $requestUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -54,7 +58,11 @@ if (!isset($segmentos[1]) || $segmentos[1] !== 'api' || !isset($segmentos[2])) {
             'PUT /api/pedidos/{id}/estado' => 'Cambiar estado del pedido',
             'GET /api/pedidos/{id}/detalles' => 'Obtener detalles del pedido',
             'POST /api/pedidos/{id}/detalles' => 'Agregar producto al pedido',
-            'DELETE /api/pedidos/{id}/detalles' => 'Eliminar producto del pedido'
+            'DELETE /api/pedidos/{id}/detalles' => 'Eliminar producto del pedido',
+            'POST /api/auth/login' => 'Autenticar usuario y obtener token JWT',
+            'GET /api/auth/verify' => 'Verificar validez del token',
+            'GET /api/perfil' => 'Obtener mis datos (requiere autenticación)',
+            'PUT /api/perfil' => 'Actualizar mis datos (email, nombre, password)'
         ]
     ]);
     exit();
@@ -68,20 +76,45 @@ $database = new Database();
 
 switch ($recurso) {
     case 'productos':
+        // GET es publico, POST/PUT/DELETE requiere admin
+        if ($requestMethod !== 'GET') {
+            AuthMiddleware::soloAdmin();
+        }
         $productoId = $id ? (int)$id : null;
         $controller = new ProductoController($database, $requestMethod, $productoId);
         $controller->processRequest();
         break;
 
     case 'usuarios':
+        // Todos los endpoints de usuarios requieren admin
+        AuthMiddleware::soloAdmin();
         $usuarioId = $id ? (int)$id : null;
         $controller = new UsuarioController($database, $requestMethod, $usuarioId);
         $controller->processRequest();
         break;
 
     case 'pedidos':
+        // GET permite admin o usuario, el resto solo admin
+        if ($requestMethod === 'GET') {
+            $usuarioActual = AuthMiddleware::verificar(['admin', 'usuario']);
+        } else {
+            $usuarioActual = AuthMiddleware::soloAdmin();
+        }
         $pedidoId = $id ? (int)$id : null;
-        $controller = new PedidoController($database, $requestMethod, $pedidoId, $accion);
+        $controller = new PedidoController($database, $requestMethod, $pedidoId, $accion, $usuarioActual);
+        $controller->processRequest();
+        break;
+
+    case 'auth':
+        // Auth es publico (login, verify)
+        $controller = new AuthController($database, $requestMethod, $id);
+        $controller->processRequest();
+        break;
+
+    case 'perfil':
+        // Perfil requiere autenticación (cualquier usuario logueado)
+        $usuarioActual = AuthMiddleware::verificar(['admin', 'usuario']);
+        $controller = new PerfilController($database, $requestMethod, $usuarioActual);
         $controller->processRequest();
         break;
 

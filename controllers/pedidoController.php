@@ -8,8 +8,9 @@ class PedidoController
     private $requestMethod;
     private $pedidoId;
     private $accion;
+    private $usuarioActual;
 
-    public function __construct($db, $requestMethod, $pedidoId = null, $accion = null)
+    public function __construct($db, $requestMethod, $pedidoId = null, $accion = null, $usuarioActual = null)
     {
         $this->pedidoDB = new PedidoDB($db);
         $this->detallePedidoDB = new DetallePedidoDB($db);
@@ -17,6 +18,7 @@ class PedidoController
         $this->requestMethod = $requestMethod;
         $this->pedidoId = $pedidoId;
         $this->accion = $accion;
+        $this->usuarioActual = $usuarioActual;
     }
 
     public function processRequest()
@@ -101,6 +103,18 @@ class PedidoController
             return $this->respuestaNoEncontrada();
         }
 
+        // Verificar que usuario no-admin solo pueda ver sus propios pedidos
+        if ($this->usuarioActual && $this->usuarioActual['rol'] !== 'admin') {
+            if ($pedido['usuario_id'] != $this->usuarioActual['id']) {
+                $respuesta['status_code_header'] = 'HTTP/1.1 403 Forbidden';
+                $respuesta['body'] = json_encode([
+                    'success' => false,
+                    'error' => 'No tienes permiso para ver este pedido'
+                ]);
+                return $respuesta;
+            }
+        }
+
         // Incluir detalles del pedido
         $pedido['detalles'] = $this->detallePedidoDB->getByPedidoId($id);
 
@@ -119,6 +133,11 @@ class PedidoController
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
         $estado = isset($_GET['estado']) ? $_GET['estado'] : '';
         $usuarioId = isset($_GET['usuario_id']) ? (int)$_GET['usuario_id'] : null;
+
+        // Si el usuario no es admin, forzar filtro por su propio ID
+        if ($this->usuarioActual && $this->usuarioActual['rol'] !== 'admin') {
+            $usuarioId = $this->usuarioActual['id'];
+        }
 
         // Usar nuevo método paginado
         $resultado = $this->pedidoDB->getAllPaginated($page, $limit, $estado, $usuarioId);

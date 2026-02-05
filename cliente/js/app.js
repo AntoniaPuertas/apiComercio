@@ -1,13 +1,12 @@
 /**
- * App - Inicializacion y navegacion del dashboard
+ * App Cliente - Inicializacion y navegacion del area de cliente
  */
 
-const App = {
-    currentSection: 'productos',
+const ClienteApp = {
+    currentSection: 'pedidos',
     modules: {
-        productos: ProductosModule,
-        usuarios: UsuariosModule,
-        pedidos: PedidosModule
+        pedidos: MisPedidosModule,
+        perfil: MiPerfilModule
     },
 
     // =========================================
@@ -15,24 +14,21 @@ const App = {
     // =========================================
 
     init() {
-        // Verificar autenticacion antes de cargar el dashboard
-        if (!Auth.checkAuth()) {
-            return; // checkAuth redirige a login si no hay sesion
-        }
-
-        // Verificar que el usuario sea admin
-        const user = Auth.getUser();
-        if (!user || user.rol !== 'admin') {
-            // Usuario no es admin, redirigir al area de cliente
-            window.location.replace('/apiComercio/cliente/index.html');
+        // Verificar autenticacion
+        if (!Auth.isAuthenticated()) {
+            window.location.replace('/apiComercio/login.html');
             return;
         }
 
-        // Mostrar informacion del usuario en el sidebar
-        this.displayUserInfo();
+        // Verificar que no sea admin
+        const user = Auth.getUser();
+        if (user && user.rol === 'admin') {
+            window.location.replace('/apiComercio/admin/index.html');
+            return;
+        }
 
-        // Inicializar componentes comunes
-        Components.init();
+        // Mostrar informacion del usuario
+        this.displayUserInfo();
 
         // Configurar navegacion
         this.setupNavigation();
@@ -40,27 +36,28 @@ const App = {
         // Configurar logout
         this.setupLogout();
 
+        // Configurar modal
+        this.setupModal();
+
         // Cargar seccion inicial
-        this.navigateTo('productos');
+        this.navigateTo('pedidos');
     },
 
     // =========================================
-    // Autenticacion
+    // UI
     // =========================================
 
     displayUserInfo() {
         const user = Auth.getUser();
         if (user) {
-            // Actualizar nombre en el sidebar si existe el elemento
             const userNameEl = document.getElementById('user-name');
             if (userNameEl) {
                 userNameEl.textContent = user.nombre;
             }
 
-            // Actualizar rol
             const userRoleEl = document.getElementById('user-role');
             if (userRoleEl) {
-                userRoleEl.textContent = user.rol;
+                userRoleEl.textContent = 'Cliente';
             }
         }
     },
@@ -70,11 +67,53 @@ const App = {
         if (logoutBtn) {
             logoutBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                if (confirm('¿Deseas cerrar sesion?')) {
+                if (confirm('Deseas cerrar sesion?')) {
                     Auth.logout();
                 }
             });
         }
+    },
+
+    setupModal() {
+        const modal = document.getElementById('modal');
+        const closeBtn = document.getElementById('modal-close');
+        const cancelBtn = document.getElementById('modal-cancel');
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeModal());
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.closeModal());
+        }
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeModal();
+                }
+            });
+        }
+    },
+
+    openModal(title, content, showSave = false, onSave = null) {
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const saveBtn = document.getElementById('modal-save');
+
+        if (modalTitle) modalTitle.textContent = title;
+        if (modalBody) modalBody.innerHTML = content;
+        if (saveBtn) {
+            saveBtn.style.display = showSave ? 'inline-block' : 'none';
+            if (showSave && onSave) {
+                saveBtn.onclick = onSave;
+            }
+        }
+        if (modal) modal.classList.add('active');
+    },
+
+    closeModal() {
+        const modal = document.getElementById('modal');
+        if (modal) modal.classList.remove('active');
     },
 
     // =========================================
@@ -107,12 +146,45 @@ const App = {
             }
         });
 
+        // Actualizar titulo
+        const titles = {
+            pedidos: 'Mis Pedidos',
+            perfil: 'Mi Perfil'
+        };
+        const titleEl = document.getElementById('section-title');
+        if (titleEl) {
+            titleEl.textContent = titles[section] || section;
+        }
+
         // Activar nuevo modulo
         this.currentSection = section;
 
         if (this.modules[section]) {
             this.modules[section].activate();
         }
+    },
+
+    // =========================================
+    // Utilidades
+    // =========================================
+
+    showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 };
 
@@ -121,16 +193,14 @@ const App = {
 // =========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    App.init();
+    ClienteApp.init();
 });
 
 // =========================================
 // Verificar auth cuando se navega con boton atras
-// (pageshow se dispara cuando la pagina viene del cache)
 // =========================================
 
 window.addEventListener('pageshow', (event) => {
-    // event.persisted es true cuando la pagina viene del cache (boton atras)
     if (event.persisted) {
         if (!Auth.isAuthenticated()) {
             window.location.href = '/apiComercio/login.html';
@@ -140,7 +210,6 @@ window.addEventListener('pageshow', (event) => {
 
 // =========================================
 // Verificar auth cuando la pagina vuelve a ser visible
-// (por ejemplo, al cambiar de pestana)
 // =========================================
 
 document.addEventListener('visibilitychange', () => {

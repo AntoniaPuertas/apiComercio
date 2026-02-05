@@ -11,16 +11,37 @@ const API = {
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
 
+        // Construir headers incluyendo el token de autenticacion si existe
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        // Añadir token de autenticacion si existe
+        if (typeof Auth !== 'undefined' && Auth.getToken()) {
+            headers['Authorization'] = `Bearer ${Auth.getToken()}`;
+        }
+
+        // Combinar headers con los de options si existen
+        const finalHeaders = { ...headers, ...(options.headers || {}) };
+
         const config = {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            ...options
+            ...options,
+            headers: finalHeaders
         };
 
         try {
             const response = await fetch(url, config);
             const data = await response.json();
+
+            // Si el servidor responde 401, la sesion ha expirado
+            if (response.status === 401) {
+                // Limpiar sesion y redirigir a login
+                if (typeof Auth !== 'undefined') {
+                    Auth.clearAuth();
+                    window.location.href = '/apiComercio/login.html';
+                }
+                throw new Error(data.error || 'Sesion expirada');
+            }
 
             if (!response.ok) {
                 throw new Error(data.error || data.message || 'Error en la peticion');

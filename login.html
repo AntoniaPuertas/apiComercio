@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - API Comercio</title>
+    <link rel="stylesheet" href="admin/css/styles.css">
+    <style>
+        /* =============================================
+           Login Page Styles
+           ============================================= */
+
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--dark) 0%, #334155 100%);
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        .login-header {
+            background: var(--dark);
+            color: var(--white);
+            padding: 30px;
+            text-align: center;
+        }
+
+        .login-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.875rem;
+        }
+
+        .login-body {
+            padding: 30px;
+        }
+
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .login-form .form-group label {
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .login-form .form-group input {
+            padding: 12px 14px;
+            font-size: 1rem;
+        }
+
+        .login-form .btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+
+        .login-error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            font-size: 0.875rem;
+            display: none;
+        }
+
+        .login-error.show {
+            display: block;
+        }
+
+        .login-footer {
+            text-align: center;
+            padding: 20px 30px;
+            border-top: 1px solid var(--border);
+            background: var(--light);
+        }
+
+        .login-footer p {
+            color: var(--secondary);
+            font-size: 0.8125rem;
+        }
+
+        /* Loading state */
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 2px solid transparent;
+            border-top-color: var(--white);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Password toggle */
+        .password-wrapper {
+            position: relative;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--secondary);
+            cursor: pointer;
+            padding: 4px;
+            font-size: 1.1rem;
+        }
+
+        .password-toggle:hover {
+            color: var(--dark);
+        }
+
+        .password-wrapper input {
+            padding-right: 44px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-container">
+            <div class="login-card">
+                <!-- Header -->
+                <div class="login-header">
+                    <h1>API Comercio</h1>
+                    <p>Iniciar Sesion</p>
+                </div>
+
+                <!-- Body -->
+                <div class="login-body">
+                    <!-- Error message -->
+                    <div id="login-error" class="login-error"></div>
+
+                    <!-- Form -->
+                    <form id="login-form" class="login-form">
+                        <div class="form-group">
+                            <label for="email">Correo electronico</label>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                placeholder="tu@email.com"
+                                required
+                                autocomplete="email"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Contrasena</label>
+                            <div class="password-wrapper">
+                                <input
+                                    type="password"
+                                    id="password"
+                                    name="password"
+                                    placeholder="Tu contrasena"
+                                    required
+                                    autocomplete="current-password"
+                                >
+                                <button type="button" class="password-toggle" id="toggle-password" title="Mostrar contrasena">
+                                    &#128065;
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="btn-login">
+                            Iniciar sesion
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Footer -->
+                <div class="login-footer">
+                    <p>API Comercio v1.0.0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="admin/js/auth.js"></script>
+    <script>
+        // =========================================
+        // Login Page Logic
+        // =========================================
+
+        // Funcion para redirigir segun el rol del usuario
+        function redirectByRole() {
+            const user = Auth.getUser();
+            if (user && user.rol === 'admin') {
+                window.location.href = '/apiComercio/admin/index.html'; // Panel admin
+            } else {
+                window.location.href = '/apiComercio/cliente/index.html'; // Area cliente
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Si ya hay sesion, redirigir segun el rol
+            if (Auth.isAuthenticated()) {
+                redirectByRole();
+                return;
+            }
+
+            const form = document.getElementById('login-form');
+            const errorDiv = document.getElementById('login-error');
+            const btnLogin = document.getElementById('btn-login');
+            const togglePassword = document.getElementById('toggle-password');
+            const passwordInput = document.getElementById('password');
+
+            // Toggle password visibility
+            togglePassword.addEventListener('click', () => {
+                const type = passwordInput.type === 'password' ? 'text' : 'password';
+                passwordInput.type = type;
+                togglePassword.innerHTML = type === 'password' ? '&#128065;' : '&#128064;';
+            });
+
+            // Handle form submit
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // Reset error
+                errorDiv.classList.remove('show');
+                errorDiv.textContent = '';
+
+                // Get values
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+
+                // Validate
+                if (!email || !password) {
+                    showError('Por favor, completa todos los campos');
+                    return;
+                }
+
+                // Show loading
+                btnLogin.classList.add('btn-loading');
+                btnLogin.disabled = true;
+
+                try {
+                    // Attempt login
+                    await Auth.login(email, password);
+
+                    // Success - redirect segun el rol
+                    redirectByRole();
+
+                } catch (error) {
+                    showError(error.message || 'Error al iniciar sesion');
+                    btnLogin.classList.remove('btn-loading');
+                    btnLogin.disabled = false;
+                }
+            });
+
+            // Show error message
+            function showError(message) {
+                errorDiv.textContent = message;
+                errorDiv.classList.add('show');
+            }
+
+            // Focus on email input
+            document.getElementById('email').focus();
+        });
+    </script>
+</body>
+</html>
