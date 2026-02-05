@@ -7,6 +7,7 @@ class Database {
     private $username = DB_USER;
     private $password = DB_PASS;
     private $database = DB_NAME;
+    private $port = 3308;
 
     private $conexion;
 
@@ -16,7 +17,7 @@ class Database {
     }
 
     private function connect(){
-        $this->conexion = new mysqli($this->host, $this->username, $this->password, $this->database);
+        $this->conexion = new mysqli($this->host, $this->username, $this->password, $this->database, $this->port);
 
         if($this->conexion->connect_error){
             die("Error de conexión: " . $this->conexion->connect_error);

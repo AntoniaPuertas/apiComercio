@@ -207,6 +207,7 @@ const MisPedidosModule = {
                             <p><strong>Pedido #${pedido.id}</strong></p>
                             <p><strong>Fecha:</strong> ${this.formatDate(pedido.created_at)}</p>
                             <p><strong>Estado:</strong> <span class="badge badge-${this.getEstadoClass(pedido.estado)}">${pedido.estado}</span></p>
+                            <p><strong>Ciudad:</strong> ${pedido.ciudad || 'N/A'}</p>
                             <p><strong>Direccion de envio:</strong> ${pedido.direccion_envio}</p>
                             ${pedido.notas ? `<p><strong>Notas:</strong> ${pedido.notas}</p>` : ''}
                         </div>

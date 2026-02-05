@@ -25,9 +25,11 @@ CREATE TABLE producto (
     nombre VARCHAR(255) NOT NULL,
     precio DECIMAL(10, 2) NOT NULL,
     descripcion TEXT,
+    categoria VARCHAR(100),
     imagen VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_categoria (categoria)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: usuario
@@ -49,11 +51,13 @@ CREATE TABLE pedido (
     estado ENUM('pendiente', 'procesando', 'enviado', 'entregado', 'cancelado') NOT NULL DEFAULT 'pendiente',
     total DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     direccion_envio TEXT,
+    ciudad VARCHAR(100),
     notas TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_usuario (usuario_id),
     INDEX idx_estado (estado),
+    INDEX idx_ciudad (ciudad),
     FOREIGN KEY (usuario_id) REFERENCES usuario(id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -77,22 +81,22 @@ CREATE TABLE detalle_pedido (
 -- =============================================
 
 -- Productos (15 productos de tecnologia)
-INSERT INTO producto (codigo, nombre, precio, descripcion, imagen) VALUES
-('PROD001', 'Laptop HP Pavilion 15', 899.99, 'Laptop HP Pavilion con procesador Intel Core i5, 8GB RAM, 512GB SSD, pantalla 15.6 pulgadas Full HD', 'https://ejemplo.com/images/laptop-hp.jpg'),
-('PROD002', 'Mouse Logitech MX Master 3', 99.99, 'Mouse inalambrico ergonomico con scroll electromagnetico y conexion Bluetooth', 'https://ejemplo.com/images/mouse-logitech.jpg'),
-('PROD003', 'Teclado Mecanico Keychron K2', 89.00, 'Teclado mecanico 75% con switches Gateron Brown, retroiluminacion RGB y conectividad Bluetooth', 'https://ejemplo.com/images/teclado-keychron.jpg'),
-('PROD004', 'Monitor Samsung 27 4K', 449.99, 'Monitor Samsung 27 pulgadas UHD 4K, panel IPS, HDR10, 60Hz, USB-C con carga', 'https://ejemplo.com/images/monitor-samsung.jpg'),
-('PROD005', 'Auriculares Sony WH-1000XM5', 349.99, 'Auriculares inalambricos con cancelacion de ruido activa, 30 horas de bateria, audio Hi-Res', 'https://ejemplo.com/images/auriculares-sony.jpg'),
-('PROD006', 'Webcam Logitech C920', 79.99, 'Webcam Full HD 1080p con microfono estereo integrado y correccion automatica de luz', 'https://ejemplo.com/images/webcam-logitech.jpg'),
-('PROD007', 'SSD Samsung 970 EVO Plus 1TB', 129.99, 'Unidad de estado solido NVMe M.2, velocidad lectura 3500MB/s, escritura 3300MB/s', 'https://ejemplo.com/images/ssd-samsung.jpg'),
-('PROD008', 'Tablet iPad Air 2024', 599.00, 'iPad Air con chip M2, pantalla Liquid Retina 10.9 pulgadas, 64GB almacenamiento', 'https://ejemplo.com/images/ipad-air.jpg'),
-('PROD009', 'Cargador USB-C 65W', 45.99, 'Cargador rapido GaN de 65W con tecnologia PD 3.0, compatible con laptops y smartphones', 'https://ejemplo.com/images/cargador-usbc.jpg'),
-('PROD010', 'Hub USB-C 7 en 1', 59.99, 'Hub multipuerto con HDMI 4K, 2x USB 3.0, USB-C PD, lector SD/microSD, ethernet', 'https://ejemplo.com/images/hub-usbc.jpg'),
-('PROD011', 'Silla Gamer Secretlab Titan', 449.00, 'Silla ergonomica para gaming con soporte lumbar ajustable, reposabrazos 4D, reclinable 165 grados', 'https://ejemplo.com/images/silla-secretlab.jpg'),
-('PROD012', 'Disco Duro Externo WD 2TB', 79.99, 'Disco duro portatil USB 3.0, 2TB de capacidad, compatible con Windows y Mac', 'https://ejemplo.com/images/hdd-wd.jpg'),
-('PROD013', 'Lampara LED de Escritorio', 39.99, 'Lampara LED con 5 niveles de brillo, temperatura de color ajustable, puerto USB de carga', 'https://ejemplo.com/images/lampara-led.jpg'),
-('PROD014', 'Mousepad XL RGB', 34.99, 'Alfombrilla de raton extendida 900x400mm con iluminacion RGB perimetral y base antideslizante', 'https://ejemplo.com/images/mousepad-rgb.jpg'),
-('PROD015', 'Memoria RAM Corsair 16GB', 69.99, 'Kit de memoria DDR4 16GB (2x8GB) 3200MHz, disipador de aluminio, compatible con XMP 2.0', 'https://ejemplo.com/images/ram-corsair.jpg');
+INSERT INTO producto (codigo, nombre, precio, descripcion, categoria, imagen) VALUES
+('PROD001', 'Laptop HP Pavilion 15', 899.99, 'Laptop HP Pavilion con procesador Intel Core i5, 8GB RAM, 512GB SSD, pantalla 15.6 pulgadas Full HD', 'Computadoras', 'https://ejemplo.com/images/laptop-hp.jpg'),
+('PROD002', 'Mouse Logitech MX Master 3', 99.99, 'Mouse inalambrico ergonomico con scroll electromagnetico y conexion Bluetooth', 'Perifericos', 'https://ejemplo.com/images/mouse-logitech.jpg'),
+('PROD003', 'Teclado Mecanico Keychron K2', 89.00, 'Teclado mecanico 75% con switches Gateron Brown, retroiluminacion RGB y conectividad Bluetooth', 'Perifericos', 'https://ejemplo.com/images/teclado-keychron.jpg'),
+('PROD004', 'Monitor Samsung 27 4K', 449.99, 'Monitor Samsung 27 pulgadas UHD 4K, panel IPS, HDR10, 60Hz, USB-C con carga', 'Monitores', 'https://ejemplo.com/images/monitor-samsung.jpg'),
+('PROD005', 'Auriculares Sony WH-1000XM5', 349.99, 'Auriculares inalambricos con cancelacion de ruido activa, 30 horas de bateria, audio Hi-Res', 'Audio', 'https://ejemplo.com/images/auriculares-sony.jpg'),
+('PROD006', 'Webcam Logitech C920', 79.99, 'Webcam Full HD 1080p con microfono estereo integrado y correccion automatica de luz', 'Perifericos', 'https://ejemplo.com/images/webcam-logitech.jpg'),
+('PROD007', 'SSD Samsung 970 EVO Plus 1TB', 129.99, 'Unidad de estado solido NVMe M.2, velocidad lectura 3500MB/s, escritura 3300MB/s', 'Almacenamiento', 'https://ejemplo.com/images/ssd-samsung.jpg'),
+('PROD008', 'Tablet iPad Air 2024', 599.00, 'iPad Air con chip M2, pantalla Liquid Retina 10.9 pulgadas, 64GB almacenamiento', 'Tablets', 'https://ejemplo.com/images/ipad-air.jpg'),
+('PROD009', 'Cargador USB-C 65W', 45.99, 'Cargador rapido GaN de 65W con tecnologia PD 3.0, compatible con laptops y smartphones', 'Accesorios', 'https://ejemplo.com/images/cargador-usbc.jpg'),
+('PROD010', 'Hub USB-C 7 en 1', 59.99, 'Hub multipuerto con HDMI 4K, 2x USB 3.0, USB-C PD, lector SD/microSD, ethernet', 'Accesorios', 'https://ejemplo.com/images/hub-usbc.jpg'),
+('PROD011', 'Silla Gamer Secretlab Titan', 449.00, 'Silla ergonomica para gaming con soporte lumbar ajustable, reposabrazos 4D, reclinable 165 grados', 'Mobiliario', 'https://ejemplo.com/images/silla-secretlab.jpg'),
+('PROD012', 'Disco Duro Externo WD 2TB', 79.99, 'Disco duro portatil USB 3.0, 2TB de capacidad, compatible con Windows y Mac', 'Almacenamiento', 'https://ejemplo.com/images/hdd-wd.jpg'),
+('PROD013', 'Lampara LED de Escritorio', 39.99, 'Lampara LED con 5 niveles de brillo, temperatura de color ajustable, puerto USB de carga', 'Accesorios', 'https://ejemplo.com/images/lampara-led.jpg'),
+('PROD014', 'Mousepad XL RGB', 34.99, 'Alfombrilla de raton extendida 900x400mm con iluminacion RGB perimetral y base antideslizante', 'Perifericos', 'https://ejemplo.com/images/mousepad-rgb.jpg'),
+('PROD015', 'Memoria RAM Corsair 16GB', 69.99, 'Kit de memoria DDR4 16GB (2x8GB) 3200MHz, disipador de aluminio, compatible con XMP 2.0', 'Componentes', 'https://ejemplo.com/images/ram-corsair.jpg');
 
 -- Usuarios (1 admin + 3 usuarios normales)
 -- Nota: La contraseña de todos es 'password' (hasheada con password_hash de PHP)
@@ -103,11 +107,11 @@ INSERT INTO usuario (email, password, nombre, rol) VALUES
 ('carlos@ejemplo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Carlos Martinez', 'usuario');
 
 -- Pedidos de prueba
-INSERT INTO pedido (usuario_id, estado, total, direccion_envio, notas) VALUES
-(2, 'entregado', 999.98, 'Calle Principal 123, Madrid 28001', 'Dejar en porteria'),
-(3, 'enviado', 538.00, 'Avenida Central 456, Barcelona 08001', NULL),
-(2, 'procesando', 449.99, 'Calle Principal 123, Madrid 28001', 'Envio urgente'),
-(4, 'pendiente', 244.97, 'Plaza Mayor 789, Valencia 46001', 'Llamar antes de entregar');
+INSERT INTO pedido (usuario_id, estado, total, direccion_envio, ciudad, notas) VALUES
+(2, 'entregado', 999.98, 'Calle Principal 123, 28001', 'Madrid', 'Dejar en porteria'),
+(3, 'enviado', 538.00, 'Avenida Central 456, 08001', 'Barcelona', NULL),
+(2, 'procesando', 449.99, 'Calle Principal 123, 28001', 'Madrid', 'Envio urgente'),
+(4, 'pendiente', 244.97, 'Plaza Mayor 789, 46001', 'Valencia', 'Llamar antes de entregar');
 
 -- Detalles de pedidos
 INSERT INTO detalle_pedido (pedido_id, producto_id, cantidad, precio_unitario, subtotal) VALUES

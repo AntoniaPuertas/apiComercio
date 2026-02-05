@@ -4,6 +4,8 @@
 
 const ProductosModule = {
     currentSearch: '',
+    currentCategoria: '',
+    categoriasLoaded: false,
 
     // =========================================
     // Inicializacion
@@ -40,6 +42,10 @@ const ProductosModule = {
                 params.search = this.currentSearch;
             }
 
+            if (this.currentCategoria) {
+                params.categoria = this.currentCategoria;
+            }
+
             const response = await API.productos.getAll(params);
 
             this.renderTable(response.data);
@@ -51,21 +57,41 @@ const ProductosModule = {
         }
     },
 
+    async loadCategorias() {
+        if (this.categoriasLoaded) return;
+
+        try {
+            const response = await API.productos.getCategorias();
+            const filterCategoria = document.getElementById('filter-categoria');
+
+            response.data.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                filterCategoria.appendChild(option);
+            });
+
+            this.categoriasLoaded = true;
+        } catch (error) {
+            console.error('Error cargando categorias:', error);
+        }
+    },
+
     // =========================================
     // Renderizar tabla
     // =========================================
 
     renderTable(productos) {
         Components.table.setHeaders([
-            'Codigo', 'Nombre', 'Precio', 'Descripcion', 'Acciones'
+            'Codigo', 'Nombre', 'Categoria', 'Precio', 'Acciones'
         ]);
 
         const rows = productos.map(p => `
             <tr>
                 <td><strong>${Components.helpers.escapeHtml(p.codigo)}</strong></td>
                 <td>${Components.helpers.escapeHtml(p.nombre)}</td>
+                <td>${Components.helpers.escapeHtml(p.categoria || '-')}</td>
                 <td class="price">${Components.helpers.formatPrice(p.precio)}</td>
-                <td class="truncate">${Components.helpers.escapeHtml(Components.helpers.truncate(p.descripcion, 40))}</td>
                 <td class="actions-cell">
                     <button class="btn btn-secondary btn-sm" onclick="ProductosModule.showForm(${p.id})">Editar</button>
                     <button class="btn btn-danger btn-sm" onclick="ProductosModule.delete(${p.id})">Eliminar</button>
@@ -82,7 +108,15 @@ const ProductosModule = {
 
     async showForm(id = null) {
         const isEdit = id !== null;
-        let producto = { codigo: '', nombre: '', precio: '', descripcion: '', imagen: '' };
+        let producto = { codigo: '', nombre: '', precio: '', descripcion: '', categoria: '', imagen: '' };
+        let categorias = [];
+
+        try {
+            const catResponse = await API.productos.getCategorias();
+            categorias = catResponse.data || [];
+        } catch (error) {
+            console.error('Error cargando categorias:', error);
+        }
 
         if (isEdit) {
             try {
@@ -93,6 +127,10 @@ const ProductosModule = {
                 return;
             }
         }
+
+        const categoriasOptions = categorias.map(cat =>
+            `<option value="${Components.helpers.escapeHtml(cat)}" ${producto.categoria === cat ? 'selected' : ''}>${Components.helpers.escapeHtml(cat)}</option>`
+        ).join('');
 
         const formHtml = `
             <form id="producto-form">
@@ -107,6 +145,13 @@ const ProductosModule = {
                 <div class="form-group">
                     <label for="precio">Precio *</label>
                     <input type="number" id="precio" step="0.01" min="0" value="${producto.precio}" required>
+                </div>
+                <div class="form-group">
+                    <label for="categoria">Categoria</label>
+                    <input type="text" id="categoria" list="categorias-list" value="${Components.helpers.escapeHtml(producto.categoria || '')}" placeholder="Seleccionar o escribir nueva">
+                    <datalist id="categorias-list">
+                        ${categoriasOptions}
+                    </datalist>
                 </div>
                 <div class="form-group">
                     <label for="descripcion">Descripcion</label>
@@ -136,6 +181,7 @@ const ProductosModule = {
             codigo: document.getElementById('codigo').value.trim(),
             nombre: document.getElementById('nombre').value.trim(),
             precio: parseFloat(document.getElementById('precio').value),
+            categoria: document.getElementById('categoria').value.trim(),
             descripcion: document.getElementById('descripcion').value.trim(),
             imagen: document.getElementById('imagen').value.trim()
         };
@@ -155,6 +201,7 @@ const ProductosModule = {
             }
 
             Components.modal.close();
+            this.categoriasLoaded = false;
             this.loadData(Components.pagination.currentPage);
 
         } catch (error) {
@@ -190,12 +237,30 @@ const ProductosModule = {
         document.getElementById('btn-nuevo').style.display = 'inline-flex';
         document.getElementById('btn-nuevo').textContent = '+ Nuevo Producto';
         document.getElementById('filter-estado-container').style.display = 'none';
+        document.getElementById('filter-categoria-container').style.display = 'block';
+        document.getElementById('filter-categoria').value = '';
         document.getElementById('search-input').placeholder = 'Buscar por codigo o nombre...';
 
         this.currentSearch = '';
+        this.currentCategoria = '';
         Components.search.clear();
         Components.pagination.reset();
         this.init();
+        this.initCategoriaFilter();
+        this.loadCategorias();
         this.loadData();
+    },
+
+    initCategoriaFilter() {
+        const filterCategoria = document.getElementById('filter-categoria');
+        filterCategoria.onchange = () => {
+            this.currentCategoria = filterCategoria.value;
+            Components.pagination.reset();
+            this.loadData();
+        };
+    },
+
+    deactivate() {
+        document.getElementById('filter-categoria-container').style.display = 'none';
     }
 };

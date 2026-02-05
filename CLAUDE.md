@@ -75,9 +75,14 @@ $usuario = AuthMiddleware::verificarOpcional();
 ## Tablas de la BD
 
 1. **producto** - Catálogo de productos (15 registros de prueba)
+   - Campos: id, codigo, nombre, precio, descripcion, categoria, imagen, created_at, updated_at
+   - Categorías: Computadoras, Perifericos, Monitores, Audio, Almacenamiento, Tablets, Accesorios, Mobiliario, Componentes
 2. **usuario** - Usuarios con roles admin/usuario (4 registros)
+   - Campos: id, email, password, nombre, rol, activo, created_at, updated_at
 3. **pedido** - Pedidos con estados (4 registros)
+   - Campos: id, usuario_id, estado, total, direccion_envio, ciudad, notas, created_at, updated_at
 4. **detalle_pedido** - Líneas de pedido (8 registros)
+   - Campos: id, pedido_id, producto_id, cantidad, precio_unitario, subtotal, created_at
 
 ## Endpoints Implementados
 
@@ -87,7 +92,9 @@ $usuario = AuthMiddleware::verificarOpcional();
 
 ### Productos: `/api/productos`
 - CRUD completo (GET, POST, PUT, DELETE)
+- `GET /api/productos/categorias` - Obtener lista de categorías únicas
 - GET es público, POST/PUT/DELETE requiere rol `admin`
+- Filtros disponibles: `?search=`, `?categoria=`, `?page=`, `?limit=`
 
 ### Usuarios: `/api/usuarios`
 - CRUD completo
@@ -194,3 +201,61 @@ $respuesta['body'] = json_encode([
    - `pedido.usuario_id` → RESTRICT (no permite borrar usuario con pedidos)
    - `detalle_pedido.pedido_id` → CASCADE (al borrar pedido, borra detalles)
    - `detalle_pedido.producto_id` → RESTRICT (no permite borrar producto en pedidos)
+
+5. **Puerto MySQL:** WAMP usa el puerto 3308 (no el 3306 predeterminado). La conexión en `config/database.php` incluye este puerto.
+
+---
+
+## Historial de Cambios
+
+### 2026-02-05: Agregar campos categoria y ciudad
+
+**Objetivo:** Agregar campo `categoria` a productos y campo `ciudad` a pedidos.
+
+#### Archivos modificados:
+
+**Base de datos:**
+- `database/apiComercioDB.sql` - Agregados campos categoria (producto) y ciudad (pedido) con índices
+
+**Modelos:**
+- `models/ProductoDB.php`:
+  - Nuevo método `getCategorias()` para obtener categorías únicas
+  - Actualizado `getAllPaginated()` con filtro por categoría
+  - Actualizado `createProducto()` y `updateProducto()` con parámetro categoria
+- `models/PedidoDB.php`:
+  - Actualizado `create()` y `update()` con parámetro ciudad
+
+**Controllers:**
+- `controllers/ProductoController.php`:
+  - Nuevo método `getCategorias()`
+  - Actualizado `getAllProductos()` con filtro categoria
+  - Actualizado validaciones para incluir categoria
+- `controllers/PedidoController.php`:
+  - Campo ciudad requerido en `createPedido()`
+  - Actualizado `updatePedido()` para manejar ciudad
+
+**Router:**
+- `api/index.php` - Nueva ruta `GET /api/productos/categorias`
+
+**Dashboard Admin:**
+- `admin/index.html` - Agregado filtro de categorías
+- `admin/js/api.js` - Método `API.productos.getCategorias()`
+- `admin/js/productos.js`:
+  - Filtro por categoría en listado
+  - Campo categoría en formulario con datalist
+  - Columna categoría en tabla
+- `admin/js/pedidos.js`:
+  - Campo ciudad en formulario de nuevo pedido
+  - Muestra ciudad en vista de detalles
+
+**Área Cliente:**
+- `cliente/js/pedidos.js` - Muestra ciudad en detalles del pedido
+
+**Configuración:**
+- `config/database.php` - Especificado puerto 3308 para MySQL de WAMP
+
+#### Categorías disponibles:
+Computadoras, Perifericos, Monitores, Audio, Almacenamiento, Tablets, Accesorios, Mobiliario, Componentes
+
+#### Ciudades de prueba:
+Madrid, Barcelona, Valencia

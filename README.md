@@ -9,20 +9,33 @@ apiComercio/
 ├── api/
 │   └── index.php              # Router principal de la API
 ├── config/
-│   ├── config.php             # Configuración de BD (credenciales)
+│   ├── config.php             # Configuración de BD y JWT
 │   ├── config_plantilla.php   # Plantilla de configuración
 │   └── database.php           # Clase de conexión a BD
 ├── controllers/
+│   ├── AuthController.php     # Controlador de autenticación
+│   ├── PerfilController.php   # Controlador de perfil de usuario
 │   ├── productoController.php # Controlador de productos
 │   ├── usuarioController.php  # Controlador de usuarios
 │   └── pedidoController.php   # Controlador de pedidos y detalles
+├── lib/
+│   ├── JWT.php                # Librería para tokens JWT
+│   └── AuthMiddleware.php     # Middleware de autorización
 ├── models/
 │   ├── productoDB.php         # Modelo de productos
 │   ├── usuarioDB.php          # Modelo de usuarios
 │   ├── pedidoDB.php           # Modelo de pedidos
 │   └── detallePedidoDB.php    # Modelo de detalles de pedido
+├── admin/                     # Dashboard de administración
+│   ├── index.html
+│   ├── css/
+│   └── js/
+├── cliente/                   # Área de cliente
+│   ├── index.html
+│   └── js/
 ├── database/
 │   └── apiComercioDB.sql      # Script para crear/recrear la BD
+├── login.html                 # Página de login
 ├── .htaccess                  # Configuración Apache para URL amigables
 └── .gitignore
 ```
@@ -74,10 +87,11 @@ O importar desde phpMyAdmin.
 │ nombre      │     │ password    │     │ estado          │
 │ precio      │     │ nombre      │     │ total           │
 │ descripcion │     │ rol         │     │ direccion_envio │
-│ imagen      │     │ activo      │     │ notas           │
-│ created_at  │     │ created_at  │     │ created_at      │
-│ updated_at  │     │ updated_at  │     │ updated_at      │
-└─────────────┘     └─────────────┘     └─────────────────┘
+│ categoria   │     │ activo      │     │ ciudad          │
+│ imagen      │     │ created_at  │     │ notas           │
+│ created_at  │     │ updated_at  │     │ created_at      │
+│ updated_at  │     └─────────────┘     │ updated_at      │
+└─────────────┘                         └─────────────────┘
        ▲                                         ▲
        │                                         │
        │            ┌─────────────────┐          │
@@ -101,9 +115,12 @@ O importar desde phpMyAdmin.
 | nombre | VARCHAR(255) | Nombre del producto |
 | precio | DECIMAL(10,2) | Precio unitario |
 | descripcion | TEXT | Descripción detallada |
+| categoria | VARCHAR(100) | Categoría del producto |
 | imagen | VARCHAR(500) | URL de la imagen |
 | created_at | TIMESTAMP | Fecha de creación |
 | updated_at | TIMESTAMP | Fecha de última modificación |
+
+**Categorías disponibles:** Computadoras, Perifericos, Monitores, Audio, Almacenamiento, Tablets, Accesorios, Mobiliario, Componentes
 
 #### usuario
 | Campo | Tipo | Descripción |
@@ -125,6 +142,7 @@ O importar desde phpMyAdmin.
 | estado | ENUM | pendiente, procesando, enviado, entregado, cancelado |
 | total | DECIMAL(10,2) | Total del pedido (calculado) |
 | direccion_envio | TEXT | Dirección de entrega |
+| ciudad | VARCHAR(100) | Ciudad de envío |
 | notas | TEXT | Observaciones |
 | created_at | TIMESTAMP | Fecha del pedido |
 | updated_at | TIMESTAMP | Fecha de última modificación |
@@ -140,19 +158,71 @@ O importar desde phpMyAdmin.
 | subtotal | DECIMAL(10,2) | cantidad * precio_unitario |
 | created_at | TIMESTAMP | Fecha de adición |
 
+## Autenticación JWT
+
+La API utiliza JSON Web Tokens (JWT) para la autenticación.
+
+### Endpoints de Autenticación
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/auth/login` | Iniciar sesión y obtener token |
+| GET | `/auth/verify` | Verificar validez del token |
+
+**Login:**
+```bash
+curl -X POST http://localhost/apiComercio/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@comercio.com","password":"password"}'
+```
+
+**Respuesta:**
+```json
+{
+    "success": true,
+    "data": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "expira_en": 86400,
+        "usuario": {
+            "id": 1,
+            "email": "admin@comercio.com",
+            "nombre": "Administrador",
+            "rol": "admin"
+        }
+    }
+}
+```
+
+**Uso del token:**
+```bash
+curl http://localhost/apiComercio/api/usuarios \
+  -H "Authorization: Bearer <token>"
+```
+
+### Niveles de Acceso
+- **Público:** No requiere autenticación
+- **Usuario:** Requiere token válido (rol: usuario o admin)
+- **Admin:** Requiere token válido con rol admin
+
 ## API Endpoints
 
 **Base URL:** `http://localhost/apiComercio/api`
 
 ### Productos
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/productos` | Listar todos los productos |
-| GET | `/productos/{id}` | Obtener un producto |
-| POST | `/productos` | Crear producto |
-| PUT | `/productos/{id}` | Actualizar producto |
-| DELETE | `/productos/{id}` | Eliminar producto |
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/productos` | Listar productos | Público |
+| GET | `/productos/{id}` | Obtener un producto | Público |
+| GET | `/productos/categorias` | Listar categorías únicas | Público |
+| POST | `/productos` | Crear producto | Admin |
+| PUT | `/productos/{id}` | Actualizar producto | Admin |
+| DELETE | `/productos/{id}` | Eliminar producto | Admin |
+
+**Filtros disponibles (GET):**
+- `?search=texto` - Buscar por código, nombre o descripción
+- `?categoria=Perifericos` - Filtrar por categoría
+- `?page=1&limit=10` - Paginación
 
 **POST/PUT Body:**
 ```json
@@ -161,19 +231,27 @@ O importar desde phpMyAdmin.
     "nombre": "Laptop HP",
     "precio": 899.99,
     "descripcion": "Descripción del producto",
+    "categoria": "Computadoras",
     "imagen": "https://ejemplo.com/imagen.jpg"
 }
 ```
 
 ### Usuarios
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/usuarios` | Listar todos los usuarios |
-| GET | `/usuarios/{id}` | Obtener un usuario |
-| POST | `/usuarios` | Crear usuario |
-| PUT | `/usuarios/{id}` | Actualizar usuario |
-| DELETE | `/usuarios/{id}` | Eliminar usuario |
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/usuarios` | Listar todos los usuarios | Admin |
+| GET | `/usuarios/{id}` | Obtener un usuario | Admin |
+| POST | `/usuarios` | Crear usuario | Admin |
+| PUT | `/usuarios/{id}` | Actualizar usuario | Admin |
+| DELETE | `/usuarios/{id}` | Eliminar usuario | Admin |
+
+### Perfil (Usuario autenticado)
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/perfil` | Obtener mis datos | Usuario |
+| PUT | `/perfil` | Actualizar mis datos | Usuario |
 
 **POST Body (crear):**
 ```json
@@ -197,23 +275,29 @@ O importar desde phpMyAdmin.
 
 ### Pedidos
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/pedidos` | Listar todos los pedidos |
-| GET | `/pedidos/{id}` | Obtener pedido con detalles |
-| POST | `/pedidos` | Crear pedido |
-| PUT | `/pedidos/{id}` | Actualizar pedido |
-| DELETE | `/pedidos/{id}` | Eliminar pedido |
-| PUT | `/pedidos/{id}/estado` | Cambiar estado |
-| GET | `/pedidos/{id}/detalles` | Ver detalles del pedido |
-| POST | `/pedidos/{id}/detalles` | Agregar producto al pedido |
-| DELETE | `/pedidos/{id}/detalles` | Quitar producto del pedido |
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/pedidos` | Listar todos los pedidos | Admin/Usuario |
+| GET | `/pedidos/{id}` | Obtener pedido con detalles | Admin/Usuario |
+| POST | `/pedidos` | Crear pedido | Admin |
+| PUT | `/pedidos/{id}` | Actualizar pedido | Admin |
+| DELETE | `/pedidos/{id}` | Eliminar pedido | Admin |
+| PUT | `/pedidos/{id}/estado` | Cambiar estado | Admin |
+| GET | `/pedidos/{id}/detalles` | Ver detalles del pedido | Admin |
+| POST | `/pedidos/{id}/detalles` | Agregar producto al pedido | Admin |
+| DELETE | `/pedidos/{id}/detalles` | Quitar producto del pedido | Admin |
+
+**Filtros disponibles (GET):**
+- `?estado=pendiente` - Filtrar por estado
+- `?usuario_id=2` - Filtrar por cliente
+- `?page=1&limit=10` - Paginación
 
 **POST Body (crear pedido con productos):**
 ```json
 {
     "usuario_id": 2,
-    "direccion_envio": "Calle Example 123, Ciudad",
+    "ciudad": "Madrid",
+    "direccion_envio": "Calle Example 123, 28001",
     "notas": "Dejar en portería",
     "productos": [
         {"producto_id": 1, "cantidad": 2},
@@ -294,9 +378,11 @@ Estados válidos: `pendiente`, `procesando`, `enviado`, `entregado`, `cancelado`
 
 ### ProductoDB
 - `getAll()` - Obtener todos los productos
+- `getAllPaginated($page, $limit, $search, $categoria)` - Obtener paginado con filtros
 - `getById($id)` - Obtener producto por ID
-- `createProducto($codigo, $nombre, $precio, $descripcion, $imagen)` - Crear
-- `updateProducto($id, $codigo, $nombre, $precio, $descripcion, $imagen)` - Actualizar
+- `getCategorias()` - Obtener lista de categorías únicas
+- `createProducto($codigo, $nombre, $precio, $descripcion, $categoria, $imagen)` - Crear
+- `updateProducto($id, $codigo, $nombre, $precio, $descripcion, $categoria, $imagen)` - Actualizar
 - `delete($id)` - Eliminar
 
 ### UsuarioDB
@@ -311,10 +397,11 @@ Estados válidos: `pendiente`, `procesando`, `enviado`, `entregado`, `cancelado`
 
 ### PedidoDB
 - `getAll()` - Obtener todos con info de cliente
+- `getAllPaginated($page, $limit, $estado, $usuarioId)` - Obtener paginado con filtros
 - `getById($id)` - Obtener por ID con info de cliente
 - `getByUsuarioId($usuarioId)` - Pedidos de un usuario
-- `create($usuarioId, $direccionEnvio, $notas)` - Crear (retorna ID)
-- `update($id, $direccionEnvio, $notas)` - Actualizar
+- `create($usuarioId, $direccionEnvio, $ciudad, $notas)` - Crear (retorna ID)
+- `update($id, $direccionEnvio, $ciudad, $notas)` - Actualizar
 - `updateEstado($id, $estado)` - Cambiar estado
 - `updateTotal($id, $total)` - Actualizar total
 - `recalcularTotal($pedidoId)` - Recalcular desde detalles
@@ -331,22 +418,36 @@ Estados válidos: `pendiente`, `procesando`, `enviado`, `entregado`, `cancelado`
 ## Ejemplos con cURL
 
 ```bash
-# Listar productos
+# Login y obtener token
+curl -X POST http://localhost/apiComercio/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@comercio.com","password":"password"}'
+
+# Listar productos (público)
 curl http://localhost/apiComercio/api/productos
 
-# Crear producto
+# Listar productos por categoría
+curl "http://localhost/apiComercio/api/productos?categoria=Perifericos"
+
+# Obtener categorías
+curl http://localhost/apiComercio/api/productos/categorias
+
+# Crear producto (requiere token admin)
 curl -X POST http://localhost/apiComercio/api/productos \
   -H "Content-Type: application/json" \
-  -d '{"codigo":"PROD016","nombre":"Nuevo Producto","precio":99.99,"descripcion":"Desc","imagen":"url"}'
+  -H "Authorization: Bearer <token>" \
+  -d '{"codigo":"PROD016","nombre":"Nuevo Producto","precio":99.99,"descripcion":"Desc","categoria":"Accesorios","imagen":"url"}'
 
-# Crear pedido
+# Crear pedido (requiere token admin)
 curl -X POST http://localhost/apiComercio/api/pedidos \
   -H "Content-Type: application/json" \
-  -d '{"usuario_id":2,"direccion_envio":"Calle 123","productos":[{"producto_id":1,"cantidad":1}]}'
+  -H "Authorization: Bearer <token>" \
+  -d '{"usuario_id":2,"ciudad":"Madrid","direccion_envio":"Calle 123, 28001","productos":[{"producto_id":1,"cantidad":1}]}'
 
-# Cambiar estado de pedido
+# Cambiar estado de pedido (requiere token admin)
 curl -X PUT http://localhost/apiComercio/api/pedidos/1/estado \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
   -d '{"estado":"enviado"}'
 ```
 
@@ -357,3 +458,23 @@ curl -X PUT http://localhost/apiComercio/api/pedidos/1/estado \
 - El total del pedido se recalcula automáticamente al agregar/quitar detalles
 - Al eliminar un pedido, sus detalles se eliminan en cascada (FK CASCADE)
 - Los productos no se pueden eliminar si tienen pedidos asociados (FK RESTRICT)
+- Los tokens JWT expiran en 24 horas (configurable en `config.php`)
+- **Puerto MySQL:** En WAMP se usa el puerto 3308 (configurado en `database.php`)
+
+## Dashboard
+
+### Admin (`/admin/`)
+- Gestión completa de productos, usuarios y pedidos
+- Filtros por categoría, estado y cliente
+- Modificación de pedidos (agregar/quitar productos, cambiar cantidades)
+
+### Cliente (`/cliente/`)
+- Ver mis pedidos
+- Ver detalles de pedidos
+- Gestión de perfil
+
+## Interfaces
+
+- **Login:** `http://localhost/apiComercio/login.html`
+- **Dashboard Admin:** `http://localhost/apiComercio/admin/`
+- **Área Cliente:** `http://localhost/apiComercio/cliente/`

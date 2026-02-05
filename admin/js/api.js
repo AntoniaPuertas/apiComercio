@@ -102,6 +102,10 @@ const API = {
             return API.get(`/productos/${id}`);
         },
 
+        async getCategorias() {
+            return API.get('/productos/categorias');
+        },
+
         async create(data) {
             return API.post('/productos', data);
         },

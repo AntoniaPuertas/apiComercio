@@ -141,12 +141,12 @@ class PedidoDB
         return [];
     }
 
-    public function create($usuarioId, $direccionEnvio, $notas = null)
+    public function create($usuarioId, $direccionEnvio, $ciudad, $notas = null)
     {
-        $sql = "INSERT INTO {$this->table} (usuario_id, direccion_envio, notas) VALUES (?, ?, ?)";
+        $sql = "INSERT INTO {$this->table} (usuario_id, direccion_envio, ciudad, notas) VALUES (?, ?, ?, ?)";
         $stmt = $this->db->prepare($sql);
         if ($stmt) {
-            $stmt->bind_param("iss", $usuarioId, $direccionEnvio, $notas);
+            $stmt->bind_param("isss", $usuarioId, $direccionEnvio, $ciudad, $notas);
             $resultado = $stmt->execute();
             if ($resultado) {
                 $insertId = $this->db->insert_id;
@@ -184,12 +184,12 @@ class PedidoDB
         return false;
     }
 
-    public function update($id, $direccionEnvio, $notas)
+    public function update($id, $direccionEnvio, $ciudad, $notas)
     {
-        $sql = "UPDATE {$this->table} SET direccion_envio = ?, notas = ? WHERE id = ?";
+        $sql = "UPDATE {$this->table} SET direccion_envio = ?, ciudad = ?, notas = ? WHERE id = ?";
         $stmt = $this->db->prepare($sql);
         if ($stmt) {
-            $stmt->bind_param("ssi", $direccionEnvio, $notas, $id);
+            $stmt->bind_param("sssi", $direccionEnvio, $ciudad, $notas, $id);
             $resultado = $stmt->execute();
             $stmt->close();
             return $resultado;

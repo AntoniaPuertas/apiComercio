@@ -265,6 +265,7 @@ const PedidosModule = {
                     <p><strong>Cliente:</strong> ${Components.helpers.escapeHtml(pedido.cliente_nombre || 'N/A')}</p>
                     <p><strong>Email:</strong> ${Components.helpers.escapeHtml(pedido.cliente_email || 'N/A')}</p>
                     <p><strong>Estado:</strong> ${Components.helpers.statusBadge(pedido.estado)}</p>
+                    <p><strong>Ciudad:</strong> ${Components.helpers.escapeHtml(pedido.ciudad || 'N/A')}</p>
                     <p><strong>Direccion:</strong> ${Components.helpers.escapeHtml(pedido.direccion_envio || 'N/A')}</p>
                     <p><strong>Notas:</strong> ${Components.helpers.escapeHtml(pedido.notas || 'Sin notas')}</p>
                     <p><strong>Fecha:</strong> ${Components.helpers.formatDate(pedido.created_at)}</p>
@@ -384,8 +385,12 @@ const PedidosModule = {
                         </select>
                     </div>
                     <div class="form-group">
+                        <label for="ciudad">Ciudad *</label>
+                        <input type="text" id="ciudad" required placeholder="Ej: Madrid">
+                    </div>
+                    <div class="form-group">
                         <label for="direccion_envio">Direccion de envio *</label>
-                        <textarea id="direccion_envio" required></textarea>
+                        <textarea id="direccion_envio" required placeholder="Calle, numero, codigo postal..."></textarea>
                     </div>
                     <div class="form-group">
                         <label for="notas">Notas</label>
@@ -410,11 +415,12 @@ const PedidosModule = {
     async save() {
         const data = {
             usuario_id: parseInt(document.getElementById('usuario_id').value),
+            ciudad: document.getElementById('ciudad').value.trim(),
             direccion_envio: document.getElementById('direccion_envio').value.trim(),
             notas: document.getElementById('notas').value.trim()
         };
 
-        if (!data.usuario_id || !data.direccion_envio) {
+        if (!data.usuario_id || !data.ciudad || !data.direccion_envio) {
             Components.toast.error('Por favor completa los campos requeridos');
             return;
         }

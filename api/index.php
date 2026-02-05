@@ -76,6 +76,12 @@ $database = new Database();
 
 switch ($recurso) {
     case 'productos':
+        // Endpoint especial para categorias
+        if ($id === 'categorias' && $requestMethod === 'GET') {
+            $controller = new ProductoController($database, $requestMethod, null);
+            $controller->getCategorias();
+            break;
+        }
         // GET es publico, POST/PUT/DELETE requiere admin
         if ($requestMethod !== 'GET') {
             AuthMiddleware::soloAdmin();

@@ -29,18 +29,23 @@ class ProductoDB
         }
     }
 
-    public function getAllPaginated($page = 1, $limit = 10, $search = '')
+    public function getAllPaginated($page = 1, $limit = 10, $search = '', $categoria = '')
     {
         $page = max(1, (int)$page);
         $limit = max(1, (int)$limit);
         $offset = ($page - 1) * $limit;
 
-        // Construir WHERE clause para búsqueda
-        $where = '';
+        // Construir WHERE clause para búsqueda y filtro
+        $conditions = [];
         if (!empty($search)) {
             $search = '%' . $this->db->real_escape_string($search) . '%';
-            $where = " WHERE codigo LIKE '{$search}' OR nombre LIKE '{$search}' OR descripcion LIKE '{$search}'";
+            $conditions[] = "(codigo LIKE '{$search}' OR nombre LIKE '{$search}' OR descripcion LIKE '{$search}')";
         }
+        if (!empty($categoria)) {
+            $categoria = $this->db->real_escape_string($categoria);
+            $conditions[] = "categoria = '{$categoria}'";
+        }
+        $where = count($conditions) > 0 ? ' WHERE ' . implode(' AND ', $conditions) : '';
 
         // Contar total de registros
         $countSql = "SELECT COUNT(*) as total FROM {$this->table}" . $where;
@@ -104,12 +109,27 @@ class ProductoDB
         return null;
     }
 
-    public function createProducto($codigo, $nombre, $precio, $descripcion, $imagen)
+    public function getCategorias()
     {
-        $sql = "INSERT INTO {$this->table} (codigo, nombre, precio, descripcion, imagen) VALUES (?, ?, ?, ?, ?)";
+        $sql = "SELECT DISTINCT categoria FROM {$this->table} WHERE categoria IS NOT NULL AND categoria != '' ORDER BY categoria";
+        $resultado = $this->db->query($sql);
+
+        if ($resultado && $resultado->num_rows > 0) {
+            $categorias = [];
+            while ($row = $resultado->fetch_assoc()) {
+                $categorias[] = $row['categoria'];
+            }
+            return $categorias;
+        }
+        return [];
+    }
+
+    public function createProducto($codigo, $nombre, $precio, $descripcion, $categoria, $imagen)
+    {
+        $sql = "INSERT INTO {$this->table} (codigo, nombre, precio, descripcion, categoria, imagen) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $this->db->prepare($sql);
         if ($stmt) {
-            $stmt->bind_param("sssss", $codigo, $nombre, $precio, $descripcion, $imagen);
+            $stmt->bind_param("ssssss", $codigo, $nombre, $precio, $descripcion, $categoria, $imagen);
             $resultado = $stmt->execute();
             $stmt->close();
             return $resultado;
@@ -117,12 +137,12 @@ class ProductoDB
         return false;
     }
 
-    public function updateProducto($id, $codigo, $nombre, $precio, $descripcion, $imagen)
+    public function updateProducto($id, $codigo, $nombre, $precio, $descripcion, $categoria, $imagen)
     {
-        $sql = "UPDATE {$this->table} SET codigo = ?, nombre = ?, precio = ?, descripcion = ?, imagen = ? WHERE id = ?";
+        $sql = "UPDATE {$this->table} SET codigo = ?, nombre = ?, precio = ?, descripcion = ?, categoria = ?, imagen = ? WHERE id = ?";
         $stmt = $this->db->prepare($sql);
         if ($stmt) {
-            $stmt->bind_param("sssssi", $codigo, $nombre, $precio, $descripcion, $imagen, $id);
+            $stmt->bind_param("ssssssi", $codigo, $nombre, $precio, $descripcion, $categoria, $imagen, $id);
             $resultado = $stmt->execute();
             $stmt->close();
             return $resultado;

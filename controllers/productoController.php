@@ -68,13 +68,14 @@ class ProductoController
 
     private function getAllProductos()
     {
-        // Obtener parámetros de paginación y búsqueda
+        // Obtener parámetros de paginación, búsqueda y filtro
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
         $search = isset($_GET['search']) ? $_GET['search'] : '';
+        $categoria = isset($_GET['categoria']) ? $_GET['categoria'] : '';
 
         // Usar nuevo método paginado
-        $resultado = $this->productoDB->getAllPaginated($page, $limit, $search);
+        $resultado = $this->productoDB->getAllPaginated($page, $limit, $search, $categoria);
 
         $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
         $respuesta['body'] = json_encode([
@@ -85,20 +86,39 @@ class ProductoController
         return $respuesta;
     }
 
+    public function getCategorias()
+    {
+        $categorias = $this->productoDB->getCategorias();
+
+        $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
+        $respuesta['body'] = json_encode([
+            'success' => true,
+            'data' => $categorias
+        ]);
+
+        header($respuesta['status_code_header']);
+        echo $respuesta['body'];
+        exit();
+    }
+
     private function createProducto()
     {
         $input = json_decode(file_get_contents("php://input"), true);
 
-        if (!$input || !isset($input['codigo']) || !isset($input['nombre']) || !isset($input['precio']) || !isset($input['descripcion']) || !isset($input['imagen'])) {
+        if (!$input || !isset($input['codigo']) || !isset($input['nombre']) || !isset($input['precio'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
-                'error' => 'Datos incompletos. Se requieren: codigo, nombre, precio, descripcion, imagen'
+                'error' => 'Datos incompletos. Se requieren: codigo, nombre, precio'
             ]);
             return $respuesta;
         }
 
-        $resultado = $this->productoDB->createProducto($input['codigo'], $input['nombre'], $input['precio'], $input['descripcion'], $input['imagen']);
+        $descripcion = isset($input['descripcion']) ? $input['descripcion'] : '';
+        $categoria = isset($input['categoria']) ? $input['categoria'] : '';
+        $imagen = isset($input['imagen']) ? $input['imagen'] : '';
+
+        $resultado = $this->productoDB->createProducto($input['codigo'], $input['nombre'], $input['precio'], $descripcion, $categoria, $imagen);
         if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 201 Created';
             $respuesta['body'] = json_encode([
@@ -119,11 +139,11 @@ class ProductoController
     {
         $input = json_decode(file_get_contents("php://input"), true);
 
-        if (!$input || !isset($input['codigo']) || !isset($input['nombre']) || !isset($input['precio']) || !isset($input['descripcion']) || !isset($input['imagen'])) {
+        if (!$input || !isset($input['codigo']) || !isset($input['nombre']) || !isset($input['precio'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
-                'error' => 'Datos incompletos. Se requieren: codigo, nombre, precio, descripcion, imagen'
+                'error' => 'Datos incompletos. Se requieren: codigo, nombre, precio'
             ]);
             return $respuesta;
         }
@@ -133,7 +153,11 @@ class ProductoController
             return $this->respuestaNoEncontrada();
         }
 
-        $resultado = $this->productoDB->updateProducto($id, $input['codigo'], $input['nombre'], $input['precio'], $input['descripcion'], $input['imagen']);
+        $descripcion = isset($input['descripcion']) ? $input['descripcion'] : '';
+        $categoria = isset($input['categoria']) ? $input['categoria'] : '';
+        $imagen = isset($input['imagen']) ? $input['imagen'] : '';
+
+        $resultado = $this->productoDB->updateProducto($id, $input['codigo'], $input['nombre'], $input['precio'], $descripcion, $categoria, $imagen);
         if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([

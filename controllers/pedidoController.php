@@ -155,18 +155,18 @@ class PedidoController
     {
         $input = json_decode(file_get_contents("php://input"), true);
 
-        if (!$input || !isset($input['usuario_id']) || !isset($input['direccion_envio'])) {
+        if (!$input || !isset($input['usuario_id']) || !isset($input['direccion_envio']) || !isset($input['ciudad'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
-                'error' => 'Datos incompletos. Se requieren: usuario_id, direccion_envio'
+                'error' => 'Datos incompletos. Se requieren: usuario_id, direccion_envio, ciudad'
             ]);
             return $respuesta;
         }
 
         $notas = isset($input['notas']) ? $input['notas'] : null;
 
-        $pedidoId = $this->pedidoDB->create($input['usuario_id'], $input['direccion_envio'], $notas);
+        $pedidoId = $this->pedidoDB->create($input['usuario_id'], $input['direccion_envio'], $input['ciudad'], $notas);
 
         if ($pedidoId) {
             // Si vienen productos, agregarlos al pedido
@@ -210,9 +210,10 @@ class PedidoController
         }
 
         $direccionEnvio = isset($input['direccion_envio']) ? $input['direccion_envio'] : $pedido['direccion_envio'];
+        $ciudad = isset($input['ciudad']) ? $input['ciudad'] : $pedido['ciudad'];
         $notas = isset($input['notas']) ? $input['notas'] : $pedido['notas'];
 
-        $resultado = $this->pedidoDB->update($id, $direccionEnvio, $notas);
+        $resultado = $this->pedidoDB->update($id, $direccionEnvio, $ciudad, $notas);
         if ($resultado) {
             $respuesta['status_code_header'] = 'HTTP/1.1 200 OK';
             $respuesta['body'] = json_encode([
