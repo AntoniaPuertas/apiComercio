@@ -65,12 +65,12 @@ $usuario = AuthMiddleware::verificarOpcional();
 ```
 
 ### Protección de Rutas
-| Endpoint | GET | POST/PUT/DELETE |
-|----------|-----|-----------------|
-| /api/productos | Público | Solo admin |
-| /api/usuarios | Solo admin | Solo admin |
-| /api/pedidos | Admin/Usuario | Solo admin |
-| /api/auth | Público | Público |
+| Endpoint | GET | POST | PUT/DELETE |
+|----------|-----|------|------------|
+| /api/productos | Público | Solo admin | Solo admin |
+| /api/usuarios | Solo admin | Solo admin | Solo admin |
+| /api/pedidos | Admin/Usuario | Admin/Usuario | Solo admin |
+| /api/auth | Público | Público | - |
 
 ## Tablas de la BD
 
@@ -83,11 +83,17 @@ $usuario = AuthMiddleware::verificarOpcional();
    - Campos: id, usuario_id, estado, total, direccion_envio, ciudad, notas, created_at, updated_at
 4. **detalle_pedido** - Líneas de pedido (8 registros)
    - Campos: id, pedido_id, producto_id, cantidad, precio_unitario, subtotal, created_at
+5. **password_reset** - Tokens para recuperación de contraseña
+   - Campos: id, usuario_id, token, expira_at, usado, created_at
+   - FK: usuario_id → usuario(id) ON DELETE CASCADE
 
 ## Endpoints Implementados
 
 ### Autenticación: `/api/auth`
 - `POST /api/auth/login` - Autenticar usuario, retorna token JWT
+- `POST /api/auth/register` - Registrar nuevo usuario (auto-login)
+- `POST /api/auth/forgot-password` - Solicitar token de recuperación
+- `POST /api/auth/reset-password` - Restablecer contraseña con token
 - `GET /api/auth/verify` - Verificar validez del token
 
 ### Productos: `/api/productos`
@@ -104,9 +110,11 @@ $usuario = AuthMiddleware::verificarOpcional();
 ### Pedidos: `/api/pedidos`
 - CRUD completo
 - `/pedidos/{id}/estado` - PUT para cambiar estado
-- `/pedidos/{id}/detalles` - GET, POST, DELETE para gestionar líneas
+- `/pedidos/{id}/detalles` - GET, POST, PUT, DELETE para gestionar líneas
 - Total se recalcula automáticamente
-- GET permite rol `admin` o `usuario`, resto requiere `admin`
+- GET y POST permiten rol `admin` o `usuario`, PUT/DELETE requiere `admin`
+- Usuarios no-admin solo pueden crear pedidos para sí mismos (usuario_id forzado desde JWT)
+- POST acepta array `productos` para crear pedido con detalles en una sola llamada
 
 ## Patrón de Código
 
@@ -159,15 +167,19 @@ $respuesta['body'] = json_encode([
 
 - [x] Autenticación JWT (`lib/JWT.php`)
 - [x] Endpoint de login (`POST /api/auth/login`)
+- [x] Registro de usuarios (`POST /api/auth/register`)
+- [x] Recuperación de contraseña (`forgot-password` / `reset-password`)
 - [x] Middleware de autorización por rol (`lib/AuthMiddleware.php`)
 - [x] Dashboard admin con login (`admin/login.html`)
 - [x] Paginación en listados
+- [x] Tienda pública con catálogo de productos (`tienda/`)
+- [x] Carrito de compras en localStorage
+- [x] Checkout con creación de pedidos desde la tienda
 
 ## Funcionalidades Pendientes (Posibles)
 
 - [ ] Validación de stock
 - [ ] Historial de cambios de estado
-- [ ] Carrito de compras
 - [ ] Refresh tokens
 - [ ] Rate limiting
 
@@ -259,3 +271,41 @@ Computadoras, Perifericos, Monitores, Audio, Almacenamiento, Tablets, Accesorios
 
 #### Ciudades de prueba:
 Madrid, Barcelona, Valencia
+
+### 2026-02-07: Frontend Tienda con Carrito y Sistema de Usuarios
+
+**Objetivo:** Crear frontend público de tienda con catálogo, carrito (localStorage), registro/login de usuarios y checkout.
+
+#### Archivos creados:
+
+**Backend:**
+- `controllers/RegistroController.php` - Endpoint POST /api/auth/register (auto-login con JWT)
+- `controllers/PasswordResetController.php` - Endpoints forgot-password y reset-password
+- `models/PasswordResetDB.php` - Modelo para tokens de recuperación
+
+**Frontend Tienda:**
+- `tienda/index.html` - SPA principal de la tienda
+- `tienda/css/tienda.css` - Estilos (reutiliza variables de admin/css)
+- `tienda/js/app.js` - Inicialización y navegación entre vistas
+- `tienda/js/tienda-api.js` - Extensión del API client + override 401
+- `tienda/js/cart.js` - Carrito en localStorage
+- `tienda/js/catalog.js` - Catálogo con grid, filtros y búsqueda
+- `tienda/js/auth-modal.js` - Modales de login/registro/recuperar contraseña
+- `tienda/js/checkout.js` - Checkout en 3 pasos + vista de carrito
+
+#### Archivos modificados:
+
+- `config/config.php` - Añadido `DEV_MODE` (muestra tokens de reset en respuesta)
+- `api/index.php` - Nuevas rutas auth (register, forgot-password, reset-password), POST pedidos abierto a usuarios
+- `controllers/pedidoController.php` - Usuarios no-admin crean pedidos con su propio usuario_id desde JWT
+- `database/apiComercioDB.sql` - Nueva tabla `password_reset`
+- `admin/js/auth.js` - Logout contextual (redirige a tienda o login según ubicación)
+- `cliente/index.html` - Añadido enlace "Tienda" en sidebar
+- `.htaccess` - Raíz redirige a `tienda/` en vez de `login.html`
+
+#### Flujo de la tienda:
+1. Catálogo público → filtrar por categoría/búsqueda → agregar al carrito
+2. Carrito persistente en localStorage → modificar cantidades
+3. Checkout requiere login → modal login/registro inline
+4. 3 pasos: revisión → datos envío → confirmación → pedido creado
+5. Recuperar contraseña: solicitar token → en DEV_MODE se muestra → nueva contraseña

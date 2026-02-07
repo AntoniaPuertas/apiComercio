@@ -9,5 +9,5 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_URI} ^/apiComercio/api/ [NC]
 RewriteRule ^ api/index.php [QSA,L]
 
-# Redirigir raiz a login
-RewriteRule ^$ login.html [L]
+# Redirigir raiz a la tienda
+RewriteRule ^$ tienda/index.html [L]

@@ -70,8 +70,12 @@ const Auth = {
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('user_data');
 
-        // Redirigir a login (raiz del proyecto)
-        window.location.href = '/apiComercio/login.html';
+        // Redirigir segun contexto
+        if (window.location.pathname.includes('/tienda/')) {
+            window.location.href = '/apiComercio/tienda/';
+        } else {
+            window.location.href = '/apiComercio/login.html';
+        }
     },
 
     /**

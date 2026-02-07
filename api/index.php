@@ -23,6 +23,9 @@ require_once '../controllers/usuarioController.php';
 require_once '../controllers/pedidoController.php';
 require_once '../controllers/AuthController.php';
 require_once '../controllers/PerfilController.php';
+require_once '../controllers/RegistroController.php';
+require_once '../controllers/PasswordResetController.php';
+require_once '../models/PasswordResetDB.php';
 
 // Averiguar la url de la petición
 $requestUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -60,6 +63,9 @@ if (!isset($segmentos[1]) || $segmentos[1] !== 'api' || !isset($segmentos[2])) {
             'POST /api/pedidos/{id}/detalles' => 'Agregar producto al pedido',
             'DELETE /api/pedidos/{id}/detalles' => 'Eliminar producto del pedido',
             'POST /api/auth/login' => 'Autenticar usuario y obtener token JWT',
+            'POST /api/auth/register' => 'Registrar nuevo usuario',
+            'POST /api/auth/forgot-password' => 'Solicitar recuperacion de contrasena',
+            'POST /api/auth/reset-password' => 'Restablecer contrasena con token',
             'GET /api/auth/verify' => 'Verificar validez del token',
             'GET /api/perfil' => 'Obtener mis datos (requiere autenticación)',
             'PUT /api/perfil' => 'Actualizar mis datos (email, nombre, password)'
@@ -100,8 +106,8 @@ switch ($recurso) {
         break;
 
     case 'pedidos':
-        // GET permite admin o usuario, el resto solo admin
-        if ($requestMethod === 'GET') {
+        // GET y POST permiten admin o usuario, el resto solo admin
+        if ($requestMethod === 'GET' || $requestMethod === 'POST') {
             $usuarioActual = AuthMiddleware::verificar(['admin', 'usuario']);
         } else {
             $usuarioActual = AuthMiddleware::soloAdmin();
@@ -112,9 +118,20 @@ switch ($recurso) {
         break;
 
     case 'auth':
-        // Auth es publico (login, verify)
-        $controller = new AuthController($database, $requestMethod, $id);
-        $controller->processRequest();
+        // Auth es publico (login, verify, register, forgot-password, reset-password)
+        if ($id === 'register' && $requestMethod === 'POST') {
+            $controller = new RegistroController($database, $requestMethod);
+            $controller->processRequest();
+        } elseif ($id === 'forgot-password' && $requestMethod === 'POST') {
+            $controller = new PasswordResetController($database, $requestMethod, 'forgot');
+            $controller->processRequest();
+        } elseif ($id === 'reset-password' && $requestMethod === 'POST') {
+            $controller = new PasswordResetController($database, $requestMethod, 'reset');
+            $controller->processRequest();
+        } else {
+            $controller = new AuthController($database, $requestMethod, $id);
+            $controller->processRequest();
+        }
         break;
 
     case 'perfil':

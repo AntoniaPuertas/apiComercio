@@ -14,6 +14,8 @@ apiComercio/
 │   └── database.php           # Clase de conexión a BD
 ├── controllers/
 │   ├── AuthController.php     # Controlador de autenticación
+│   ├── RegistroController.php # Controlador de registro de usuarios
+│   ├── PasswordResetController.php # Controlador de recuperación de contraseña
 │   ├── PerfilController.php   # Controlador de perfil de usuario
 │   ├── productoController.php # Controlador de productos
 │   ├── usuarioController.php  # Controlador de usuarios
@@ -25,12 +27,17 @@ apiComercio/
 │   ├── productoDB.php         # Modelo de productos
 │   ├── usuarioDB.php          # Modelo de usuarios
 │   ├── pedidoDB.php           # Modelo de pedidos
-│   └── detallePedidoDB.php    # Modelo de detalles de pedido
+│   ├── detallePedidoDB.php    # Modelo de detalles de pedido
+│   └── PasswordResetDB.php   # Modelo de tokens de recuperación
 ├── admin/                     # Dashboard de administración
 │   ├── index.html
 │   ├── css/
 │   └── js/
-├── cliente/                   # Área de cliente
+├── tienda/                    # Tienda pública con carrito
+│   ├── index.html
+│   ├── css/
+│   └── js/
+├── cliente/                   # Área de cliente (mis pedidos, perfil)
 │   ├── index.html
 │   └── js/
 ├── database/
@@ -167,6 +174,9 @@ La API utiliza JSON Web Tokens (JWT) para la autenticación.
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | POST | `/auth/login` | Iniciar sesión y obtener token |
+| POST | `/auth/register` | Registrar nuevo usuario (auto-login) |
+| POST | `/auth/forgot-password` | Solicitar token de recuperación |
+| POST | `/auth/reset-password` | Restablecer contraseña con token |
 | GET | `/auth/verify` | Verificar validez del token |
 
 **Login:**
@@ -279,7 +289,7 @@ curl http://localhost/apiComercio/api/usuarios \
 |--------|----------|-------------|------|
 | GET | `/pedidos` | Listar todos los pedidos | Admin/Usuario |
 | GET | `/pedidos/{id}` | Obtener pedido con detalles | Admin/Usuario |
-| POST | `/pedidos` | Crear pedido | Admin |
+| POST | `/pedidos` | Crear pedido | Admin/Usuario |
 | PUT | `/pedidos/{id}` | Actualizar pedido | Admin |
 | DELETE | `/pedidos/{id}` | Eliminar pedido | Admin |
 | PUT | `/pedidos/{id}/estado` | Cambiar estado | Admin |
@@ -475,6 +485,14 @@ curl -X PUT http://localhost/apiComercio/api/pedidos/1/estado \
 
 ## Interfaces
 
+- **Tienda (público):** `http://localhost/apiComercio/tienda/` - Catálogo, carrito, checkout
 - **Login:** `http://localhost/apiComercio/login.html`
 - **Dashboard Admin:** `http://localhost/apiComercio/admin/`
 - **Área Cliente:** `http://localhost/apiComercio/cliente/`
+
+### Tienda (`/tienda/`)
+- Catálogo de productos con filtros por categoría y búsqueda
+- Carrito de compras persistente en localStorage
+- Registro de nuevos usuarios
+- Checkout en 3 pasos (revisión, envío, confirmación)
+- Recuperación de contraseña (en DEV_MODE muestra el token en pantalla)

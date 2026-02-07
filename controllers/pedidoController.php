@@ -155,11 +155,16 @@ class PedidoController
     {
         $input = json_decode(file_get_contents("php://input"), true);
 
+        // Para usuarios no-admin, forzar su propio usuario_id desde el JWT
+        if ($this->usuarioActual && $this->usuarioActual['rol'] !== 'admin') {
+            $input['usuario_id'] = $this->usuarioActual['id'];
+        }
+
         if (!$input || !isset($input['usuario_id']) || !isset($input['direccion_envio']) || !isset($input['ciudad'])) {
             $respuesta['status_code_header'] = 'HTTP/1.1 400 Bad Request';
             $respuesta['body'] = json_encode([
                 'success' => false,
-                'error' => 'Datos incompletos. Se requieren: usuario_id, direccion_envio, ciudad'
+                'error' => 'Datos incompletos. Se requieren: direccion_envio, ciudad'
             ]);
             return $respuesta;
         }
