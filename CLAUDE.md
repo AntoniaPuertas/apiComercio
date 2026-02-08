@@ -99,6 +99,7 @@ $usuario = AuthMiddleware::verificarOpcional();
 ### Productos: `/api/productos`
 - CRUD completo (GET, POST, PUT, DELETE)
 - `GET /api/productos/categorias` - Obtener lista de categorías únicas
+- `POST /api/productos/{id}/imagen` - Subir imagen de producto (multipart/form-data, max 2MB, JPG/PNG/WebP/GIF)
 - GET es público, POST/PUT/DELETE requiere rol `admin`
 - Filtros disponibles: `?search=`, `?categoria=`, `?page=`, `?limit=`
 
@@ -175,6 +176,20 @@ $respuesta['body'] = json_encode([
 - [x] Tienda pública con catálogo de productos (`tienda/`)
 - [x] Carrito de compras en localStorage
 - [x] Checkout con creación de pedidos desde la tienda
+- [x] Subida de imágenes de productos (upload, validación, optimización con GD)
+
+## Subida de Imágenes
+
+### Endpoint: `POST /api/productos/{id}/imagen`
+- Requiere autenticación admin
+- Acepta `multipart/form-data` con campo `imagen`
+- Tipos permitidos: JPEG, PNG, WebP, GIF
+- Tamaño máximo: 2 MB
+- Procesamiento: redimensiona si ancho > 800px, convierte a JPEG 85%
+- Nombre: `prod_{id}_{timestamp}.jpg`
+- Directorio: `uploads/productos/`
+- Seguridad: `.htaccess` bloquea ejecución PHP en uploads
+- Al eliminar un producto, se borra su imagen local automáticamente
 
 ## Funcionalidades Pendientes (Posibles)
 
@@ -309,3 +324,41 @@ Madrid, Barcelona, Valencia
 3. Checkout requiere login → modal login/registro inline
 4. 3 pasos: revisión → datos envío → confirmación → pedido creado
 5. Recuperar contraseña: solicitar token → en DEV_MODE se muestra → nueva contraseña
+
+### 2026-02-08: Subida de imágenes de productos
+
+**Objetivo:** Permitir subir imágenes de productos desde el admin, con validación, optimización y almacenamiento local.
+
+#### Archivos creados:
+- `uploads/.htaccess` - Bloqueo de ejecución PHP en directorio uploads
+- `uploads/productos/.htaccess` - Mismo bloqueo a nivel de subdirectorio
+
+#### Archivos modificados:
+
+**Backend:**
+- `models/ProductoDB.php`:
+  - `createProducto()` ahora retorna `insert_id` (en vez de boolean)
+  - Nuevo método `updateImagen($id, $ruta)` para actualizar solo la imagen
+- `controllers/ProductoController.php`:
+  - Nuevo método público `uploadImagen($id)`: valida tipo MIME con finfo, tamaño max 2MB, procesa con GD (resize 800px, JPEG 85%), elimina imagen anterior
+  - `createProducto()` ahora devuelve `data.id` en la respuesta
+  - `deleteProducto()` elimina archivo de imagen local al borrar producto
+- `api/index.php`:
+  - Nueva ruta `POST /api/productos/{id}/imagen`
+
+**Frontend Admin:**
+- `admin/js/api.js`:
+  - Nuevo método `API.productos.uploadImagen(id, file)` usando FormData
+- `admin/js/productos.js`:
+  - Columna "Imagen" con miniaturas en tabla de productos
+  - Campo file upload con preview en formulario (reemplaza input URL)
+  - Validación client-side de tipo y tamaño
+  - Flujo de guardado: crear/actualizar producto → subir imagen si hay archivo
+- `admin/css/styles.css`:
+  - Estilos para `.product-thumb` (miniaturas 40x40 en tabla)
+  - Estilos para `.imagen-preview` (preview 200x150 en formulario)
+
+**Frontend Tienda:**
+- `tienda/js/catalog.js`:
+  - Muestra imágenes reales de productos en cards del catálogo
+  - Fallback a emoji si la imagen no carga

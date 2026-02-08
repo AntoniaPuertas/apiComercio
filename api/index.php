@@ -48,6 +48,7 @@ if (!isset($segmentos[1]) || $segmentos[1] !== 'api' || !isset($segmentos[2])) {
             'POST /api/productos' => 'Crear producto',
             'PUT /api/productos/{id}' => 'Actualizar producto',
             'DELETE /api/productos/{id}' => 'Eliminar producto',
+            'POST /api/productos/{id}/imagen' => 'Subir imagen de producto',
             'GET /api/usuarios' => 'Listar todos los usuarios',
             'GET /api/usuarios/{id}' => 'Obtener un usuario',
             'POST /api/usuarios' => 'Crear usuario',
@@ -86,6 +87,13 @@ switch ($recurso) {
         if ($id === 'categorias' && $requestMethod === 'GET') {
             $controller = new ProductoController($database, $requestMethod, null);
             $controller->getCategorias();
+            break;
+        }
+        // Endpoint de subida de imagen
+        if ($id && $accion === 'imagen' && $requestMethod === 'POST') {
+            AuthMiddleware::soloAdmin();
+            $controller = new ProductoController($database, $requestMethod, (int)$id);
+            $controller->uploadImagen((int)$id);
             break;
         }
         // GET es publico, POST/PUT/DELETE requiere admin

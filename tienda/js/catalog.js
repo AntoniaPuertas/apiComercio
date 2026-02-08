@@ -142,11 +142,27 @@ const CatalogModule = {
         });
     },
 
+    getImagenSrc(imagen) {
+        if (!imagen) return '';
+        if (imagen.startsWith('http://') || imagen.startsWith('https://')) {
+            return imagen;
+        }
+        return '/apiComercio/' + imagen;
+    },
+
     renderProductCard(producto) {
+        let imagenHtml;
+        if (producto.imagen) {
+            const src = this.getImagenSrc(producto.imagen);
+            imagenHtml = `<img src="${src}" alt="${producto.nombre}" onerror="this.parentElement.innerHTML='<span>&#128230;</span>'">`;
+        } else {
+            imagenHtml = '<span>&#128230;</span>';
+        }
+
         return `
             <div class="product-card">
                 <div class="product-card-image">
-                    <span>&#128230;</span>
+                    ${imagenHtml}
                 </div>
                 <div class="product-card-body">
                     ${producto.categoria ? `<div class="product-card-category">${producto.categoria}</div>` : ''}

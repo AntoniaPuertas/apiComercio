@@ -131,6 +131,20 @@ class ProductoDB
         if ($stmt) {
             $stmt->bind_param("ssssss", $codigo, $nombre, $precio, $descripcion, $categoria, $imagen);
             $resultado = $stmt->execute();
+            $insertId = $this->db->insert_id;
+            $stmt->close();
+            return $resultado ? $insertId : false;
+        }
+        return false;
+    }
+
+    public function updateImagen($id, $ruta)
+    {
+        $sql = "UPDATE {$this->table} SET imagen = ? WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param("si", $ruta, $id);
+            $resultado = $stmt->execute();
             $stmt->close();
             return $resultado;
         }

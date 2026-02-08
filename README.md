@@ -40,6 +40,10 @@ apiComercio/
 ├── cliente/                   # Área de cliente (mis pedidos, perfil)
 │   ├── index.html
 │   └── js/
+├── uploads/                   # Imágenes subidas
+│   ├── .htaccess              # Bloqueo de ejecución PHP
+│   └── productos/             # Imágenes de productos
+│       └── .htaccess
 ├── database/
 │   └── apiComercioDB.sql      # Script para crear/recrear la BD
 ├── login.html                 # Página de login
@@ -123,7 +127,7 @@ O importar desde phpMyAdmin.
 | precio | DECIMAL(10,2) | Precio unitario |
 | descripcion | TEXT | Descripción detallada |
 | categoria | VARCHAR(100) | Categoría del producto |
-| imagen | VARCHAR(500) | URL de la imagen |
+| imagen | VARCHAR(500) | Ruta de imagen local o URL externa |
 | created_at | TIMESTAMP | Fecha de creación |
 | updated_at | TIMESTAMP | Fecha de última modificación |
 
@@ -228,6 +232,7 @@ curl http://localhost/apiComercio/api/usuarios \
 | POST | `/productos` | Crear producto | Admin |
 | PUT | `/productos/{id}` | Actualizar producto | Admin |
 | DELETE | `/productos/{id}` | Eliminar producto | Admin |
+| POST | `/productos/{id}/imagen` | Subir imagen de producto | Admin |
 
 **Filtros disponibles (GET):**
 - `?search=texto` - Buscar por código, nombre o descripción
@@ -391,8 +396,9 @@ Estados válidos: `pendiente`, `procesando`, `enviado`, `entregado`, `cancelado`
 - `getAllPaginated($page, $limit, $search, $categoria)` - Obtener paginado con filtros
 - `getById($id)` - Obtener producto por ID
 - `getCategorias()` - Obtener lista de categorías únicas
-- `createProducto($codigo, $nombre, $precio, $descripcion, $categoria, $imagen)` - Crear
+- `createProducto($codigo, $nombre, $precio, $descripcion, $categoria, $imagen)` - Crear (retorna ID)
 - `updateProducto($id, $codigo, $nombre, $precio, $descripcion, $categoria, $imagen)` - Actualizar
+- `updateImagen($id, $ruta)` - Actualizar solo la imagen
 - `delete($id)` - Eliminar
 
 ### UsuarioDB
@@ -446,7 +452,12 @@ curl http://localhost/apiComercio/api/productos/categorias
 curl -X POST http://localhost/apiComercio/api/productos \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
-  -d '{"codigo":"PROD016","nombre":"Nuevo Producto","precio":99.99,"descripcion":"Desc","categoria":"Accesorios","imagen":"url"}'
+  -d '{"codigo":"PROD016","nombre":"Nuevo Producto","precio":99.99,"descripcion":"Desc","categoria":"Accesorios"}'
+
+# Subir imagen de producto (requiere token admin, multipart/form-data)
+curl -X POST http://localhost/apiComercio/api/productos/1/imagen \
+  -H "Authorization: Bearer <token>" \
+  -F "imagen=@/ruta/a/imagen.jpg"
 
 # Crear pedido (requiere token admin)
 curl -X POST http://localhost/apiComercio/api/pedidos \
@@ -470,11 +481,20 @@ curl -X PUT http://localhost/apiComercio/api/pedidos/1/estado \
 - Los productos no se pueden eliminar si tienen pedidos asociados (FK RESTRICT)
 - Los tokens JWT expiran en 24 horas (configurable en `config.php`)
 - **Puerto MySQL:** En WAMP se usa el puerto 3308 (configurado en `database.php`)
+- **Subida de imágenes:** `POST /api/productos/{id}/imagen` acepta `multipart/form-data`
+  - Tipos permitidos: JPEG, PNG, WebP, GIF
+  - Tamaño máximo: 2 MB
+  - Se optimizan con GD (resize max 800px ancho, JPEG 85%)
+  - Se almacenan en `uploads/productos/` con nombre `prod_{id}_{timestamp}.jpg`
+  - Al eliminar un producto, se borra su imagen local automáticamente
+  - Directorio protegido con `.htaccess` contra ejecución de PHP
 
 ## Dashboard
 
 ### Admin (`/admin/`)
 - Gestión completa de productos, usuarios y pedidos
+- Subida de imágenes de productos (validación, optimización, almacenamiento local)
+- Miniaturas de productos en el listado
 - Filtros por categoría, estado y cliente
 - Modificación de pedidos (agregar/quitar productos, cambiar cantidades)
 
@@ -491,7 +511,7 @@ curl -X PUT http://localhost/apiComercio/api/pedidos/1/estado \
 - **Área Cliente:** `http://localhost/apiComercio/cliente/`
 
 ### Tienda (`/tienda/`)
-- Catálogo de productos con filtros por categoría y búsqueda
+- Catálogo de productos con imágenes, filtros por categoría y búsqueda
 - Carrito de compras persistente en localStorage
 - Registro de nuevos usuarios
 - Checkout en 3 pasos (revisión, envío, confirmación)

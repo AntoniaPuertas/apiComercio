@@ -116,6 +116,39 @@ const API = {
 
         async delete(id) {
             return API.delete(`/productos/${id}`);
+        },
+
+        async uploadImagen(id, file) {
+            const formData = new FormData();
+            formData.append('imagen', file);
+
+            const url = `${API.baseUrl}/productos/${id}/imagen`;
+            const headers = {};
+            if (typeof Auth !== 'undefined' && Auth.getToken()) {
+                headers['Authorization'] = `Bearer ${Auth.getToken()}`;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: headers,
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.status === 401) {
+                if (typeof Auth !== 'undefined') {
+                    Auth.clearAuth();
+                    window.location.href = '/apiComercio/login.html';
+                }
+                throw new Error(data.error || 'Sesion expirada');
+            }
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Error al subir imagen');
+            }
+
+            return data;
         }
     },
 
